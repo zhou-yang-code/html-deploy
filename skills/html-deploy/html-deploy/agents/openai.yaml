@@ -1,0 +1,4 @@
+interface:
+  display_name: "HTML Deploy"
+  short_description: "Deploy static HTML sites with the html-deploy platform"
+  default_prompt: "Use $html-deploy to deploy this ZIP to the platform and report the live URL."
