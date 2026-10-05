@@ -125,12 +125,14 @@ Skill 会依次完成：
 
 ## 内容发布模式
 
+默认发布模式：**Netlify**。自托管模式保留用于验证平台自己的内容发布链路。
+
 通过后端环境变量切换：
 
 | 模式 | `RELEASE_PROVIDER` | 返回地址 | 适用场景 |
 | --- | --- | --- | --- |
-| 自托管 | `local` | `https://api.example.com/sites/{site}/` | 验证平台自己的发布链路 |
-| Netlify | `netlify` | `https://{site}.netlify.app` | 长期公网分享和 CDN |
+| Netlify（默认） | `netlify` | `https://{site}.netlify.app` | 长期公网分享和 CDN |
+| 自托管（测试） | `local` | `https://api.example.com/sites/{site}/` | 验证平台自己的发布链路 |
 
 ### 自托管模式
 
@@ -234,16 +236,16 @@ Compose 会创建：
 SPRING_PROFILES_ACTIVE=postgres
 DATABASE_URL=<railway-postgres-url>
 STORAGE_TYPE=local
-RELEASE_PROVIDER=local
-SITE_URL_TEMPLATE=https://html-deploy-api-production.up.railway.app/sites/{site}/
+RELEASE_PROVIDER=netlify
+NETLIFY_AUTH_TOKEN=<netlify-personal-access-token>
 PUBLIC_BASE_URL=https://html-deploy-api-production.up.railway.app
 ```
 
-切换到 Netlify：
+临时切换到自托管测试：
 
 ```text
-RELEASE_PROVIDER=netlify
-NETLIFY_AUTH_TOKEN=<token>
+RELEASE_PROVIDER=local
+SITE_URL_TEMPLATE=https://html-deploy-api-production.up.railway.app/sites/{site}/
 ```
 
 ## Render 部署
