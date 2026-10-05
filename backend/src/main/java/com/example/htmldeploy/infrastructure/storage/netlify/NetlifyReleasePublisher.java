@@ -80,15 +80,18 @@ public class NetlifyReleasePublisher implements ReleasePublisher {
 
     private Site resolveSite(String siteName) throws IOException, InterruptedException {
         HttpResponse<String> existing = send(HttpRequest.newBuilder()
-                .uri(uri("/sites?name=" + siteName))
+                .uri(uri("/sites?per_page=100"))
                 .header("Authorization", authorization())
                 .GET()
                 .build());
         if (existing.statusCode() == 200) {
             JsonNode body = json(existing.body());
-            if (body.isArray() && !body.isEmpty()) {
-                JsonNode site = body.get(0);
-                return new Site(text(site, "id"), text(site, "name"));
+            if (body.isArray()) {
+                for (JsonNode site : body) {
+                    if (siteName.equals(text(site, "name"))) {
+                        return new Site(text(site, "id"), text(site, "name"));
+                    }
+                }
             }
         }
         if (existing.statusCode() != 200 && existing.statusCode() != 404) {
