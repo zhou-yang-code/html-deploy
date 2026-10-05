@@ -17,7 +17,7 @@ https://html-deploy-api-production.up.railway.app/api/v1
 
 服务是否在线请访问“后端健康检查”链接。
 
-演示项目：[华容道小游戏](games/huarong-dao/index.html)
+演示项目：[数字华容道公网演示](https://zdemo20261005final-huarong-dao-4384a449.netlify.app) · [页面源码](games/huarong-dao/index.html)
 
 ## 核心能力
 
