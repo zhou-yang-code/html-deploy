@@ -27,6 +27,7 @@ const deployments = ref<DeploymentDetails[]>([])
 const selectedFile = ref<File | null>(null)
 const providers = ref<ReleaseProviderInfo | null>(null)
 const selectedProvider = ref('')
+const pendingAction = ref<'archive' | 'delete' | null>(null)
 const loading = ref(true)
 const deploying = ref(false)
 const phase = ref('')
@@ -62,16 +63,7 @@ async function refresh() {
 }
 
 async function archiveProject() {
-  if (!project.value || !window.confirm(`确认归档“${project.value.name}”？归档后项目会从列表隐藏，数据仍保留。`)) {
-    return
-  }
-  error.value = ''
-  try {
-    await api.archiveProject(projectId.value)
-    await router.push('/projects')
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '项目归档失败'
-  }
+  pendingAction.value = 'archive'
 }
 
 async function restoreProject() {
@@ -88,19 +80,27 @@ async function restoreProject() {
 }
 
 async function deleteProject() {
-  if (!project.value) {
-    return
-  }
-  const confirmation = window.prompt(`此操作会删除项目、部署历史和对应 Netlify Site，且不可恢复。\n请输入项目标识 ${project.value.slug} 确认：`)
-  if (confirmation !== project.value.slug) {
+  pendingAction.value = 'delete'
+}
+
+async function confirmAction() {
+  const action = pendingAction.value
+  if (!action) {
     return
   }
   error.value = ''
   try {
-    await api.deleteProject(projectId.value)
+    if (action === 'archive') {
+      await api.archiveProject(projectId.value)
+    } else {
+      await api.deleteProject(projectId.value)
+    }
+    pendingAction.value = null
     await router.push('/projects')
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '项目删除失败'
+    error.value = cause instanceof Error
+      ? cause.message
+      : action === 'archive' ? '项目归档失败' : '项目删除失败'
   }
 }
 
@@ -270,6 +270,18 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <div v-if="pendingAction" class="confirm-banner">
+      <span>
+        {{ pendingAction === 'delete'
+          ? `确认删除项目 ${project?.slug ?? ''}？部署历史与 Netlify Site 都会一并清理，且不可恢复。`
+          : `确认归档 ${project?.name ?? ''}？归档后项目会从默认列表隐藏，数据仍保留。` }}
+      </span>
+      <div class="confirm-banner__actions">
+        <button class="button button--danger" type="button" @click="confirmAction">确认</button>
+        <button class="button" type="button" @click="pendingAction = null">取消</button>
+      </div>
+    </div>
+
     <div v-if="error" class="error-banner">{{ error }}</div>
 
     <div v-if="loading" class="panel empty-state">正在加载发布面板...</div>
@@ -414,6 +426,27 @@ onBeforeUnmount(() => {
 
 .icon-button--danger {
   color: #9f2f2f;
+}
+
+.confirm-banner {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #f0d5d5;
+  border-radius: 8px;
+  background: #fdf5f5;
+  color: #7d3b3b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.confirm-banner__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
 }
 
 .active-strip {
@@ -600,6 +633,11 @@ onBeforeUnmount(() => {
 
   .deploy-action {
     justify-items: stretch;
+  }
+
+  .confirm-banner {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

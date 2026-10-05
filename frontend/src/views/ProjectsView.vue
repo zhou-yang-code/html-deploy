@@ -22,6 +22,7 @@ const loading = ref(false)
 const creating = ref(false)
 const showArchived = ref(false)
 const busyProjectId = ref('')
+const pendingAction = ref<{ type: 'archive' | 'delete'; project: ProjectSummary } | null>(null)
 const error = ref('')
 const form = reactive({
   name: '',
@@ -83,22 +84,6 @@ async function createProject() {
   }
 }
 
-async function archiveProject(project: ProjectSummary) {
-  if (!window.confirm(`确认归档“${project.name}”？归档后项目会从默认列表隐藏，数据仍保留。`)) {
-    return
-  }
-  busyProjectId.value = project.id
-  error.value = ''
-  try {
-    await api.archiveProject(project.id)
-    await loadProjects()
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '项目归档失败'
-  } finally {
-    busyProjectId.value = ''
-  }
-}
-
 async function restoreProject(project: ProjectSummary) {
   busyProjectId.value = project.id
   error.value = ''
@@ -112,20 +97,37 @@ async function restoreProject(project: ProjectSummary) {
   }
 }
 
-async function deleteProject(project: ProjectSummary) {
-  const confirmation = window.prompt(
-    `此操作会删除项目、部署历史和对应的 Netlify Site，且不可恢复。\n请输入项目标识 ${project.slug} 确认：`,
-  )
-  if (confirmation !== project.slug) {
+function askArchive(project: ProjectSummary) {
+  pendingAction.value = { type: 'archive', project }
+}
+
+function askDelete(project: ProjectSummary) {
+  pendingAction.value = { type: 'delete', project }
+}
+
+function cancelAction() {
+  pendingAction.value = null
+}
+
+async function confirmAction() {
+  const action = pendingAction.value
+  if (!action) {
     return
   }
-  busyProjectId.value = project.id
+  busyProjectId.value = action.project.id
   error.value = ''
   try {
-    await api.deleteProject(project.id)
+    if (action.type === 'archive') {
+      await api.archiveProject(action.project.id)
+    } else {
+      await api.deleteProject(action.project.id)
+    }
+    pendingAction.value = null
     await loadProjects()
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '项目删除失败'
+    error.value = cause instanceof Error
+      ? cause.message
+      : action.type === 'archive' ? '项目归档失败' : '项目删除失败'
   } finally {
     busyProjectId.value = ''
   }
@@ -217,7 +219,25 @@ onMounted(load)
             {{ project.deploymentUrl }}
             <ExternalLink :size="14" />
           </a>
-          <div class="project-card__actions">
+          <div v-if="pendingAction?.project.id === project.id" class="project-confirm">
+            <span class="project-confirm__text">
+              {{ pendingAction.type === 'delete' ? `确认删除 ${project.slug}？删除后不可恢复。` : `确认归档 ${project.name}？` }}
+            </span>
+            <div class="project-confirm__actions">
+              <button
+                class="button button--danger"
+                type="button"
+                :disabled="busyProjectId === project.id"
+                @click="confirmAction"
+              >
+                确认
+              </button>
+              <button class="button" type="button" :disabled="busyProjectId === project.id" @click="cancelAction">
+                取消
+              </button>
+            </div>
+          </div>
+          <div v-else class="project-card__actions">
             <button class="button project-open" type="button" @click="router.push(`/projects/${project.id}`)">
               打开发布面板
             </button>
@@ -227,7 +247,7 @@ onMounted(load)
                 type="button"
                 :title="project.status === 'ARCHIVED' ? '恢复项目' : '归档项目'"
                 :disabled="busyProjectId === project.id"
-                @click="project.status === 'ARCHIVED' ? restoreProject(project) : archiveProject(project)"
+                @click="project.status === 'ARCHIVED' ? restoreProject(project) : askArchive(project)"
               >
                 <ArchiveRestore v-if="project.status === 'ARCHIVED'" :size="16" />
                 <Archive v-else :size="16" />
@@ -237,7 +257,7 @@ onMounted(load)
                 type="button"
                 title="删除项目"
                 :disabled="busyProjectId === project.id"
-                @click="deleteProject(project)"
+                @click="askDelete(project)"
               >
                 <Trash2 :size="16" />
               </button>
@@ -355,6 +375,28 @@ onMounted(load)
 .project-card__actions {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.project-confirm {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #f0d5d5;
+  border-radius: 7px;
+  background: #fdf5f5;
+}
+
+.project-confirm__text {
+  color: #7d3b3b;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.project-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
   gap: 8px;
 }
 </style>
