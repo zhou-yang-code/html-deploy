@@ -30,7 +30,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    AuthResult register(@Valid @RequestBody RegisterRequest request) {
+    public AuthResult register(@Valid @RequestBody RegisterRequest request) {
         return identity.register(new RegisterCommand(
                 request.email(),
                 request.password(),
@@ -40,17 +40,17 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    AuthResult login(@Valid @RequestBody LoginRequest request) {
+    public AuthResult login(@Valid @RequestBody LoginRequest request) {
         return identity.login(new LoginCommand(request.email(), request.password()));
     }
 
     @PostMapping("/refresh")
-    AuthResult refresh(@Valid @RequestBody RefreshRequest request) {
+    public AuthResult refresh(@Valid @RequestBody RefreshRequest request) {
         return identity.refresh(request.refreshToken());
     }
 
     @GetMapping("/me")
-    UserSummary me(Authentication authentication) {
+    public UserSummary me(Authentication authentication) {
         return identity.currentUser(CurrentUser.id(authentication));
     }
 

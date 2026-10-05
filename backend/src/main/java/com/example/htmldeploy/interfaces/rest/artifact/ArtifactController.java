@@ -38,7 +38,7 @@ public class ArtifactController {
     }
 
     @PostMapping("/projects/{projectId}/artifacts")
-    ArtifactUploadView createUpload(
+    public ArtifactUploadView createUpload(
             Authentication authentication,
             @PathVariable UUID projectId,
             @Valid @RequestBody CreateArtifactRequest request
@@ -58,7 +58,7 @@ public class ArtifactController {
                     "application/x-zip-compressed"
             }
     )
-    ResponseEntity<Void> uploadContent(
+    public ResponseEntity<Void> uploadContent(
             @PathVariable UUID artifactId,
             @RequestParam String token,
             HttpServletRequest request
@@ -68,12 +68,12 @@ public class ArtifactController {
     }
 
     @PostMapping("/artifacts/{artifactId}/complete")
-    ArtifactDetails complete(Authentication authentication, @PathVariable UUID artifactId) {
+    public ArtifactDetails complete(Authentication authentication, @PathVariable UUID artifactId) {
         return artifacts.completeUpload(CurrentUser.id(authentication), new ArtifactId(artifactId));
     }
 
     @GetMapping("/artifacts/{artifactId}")
-    ArtifactDetails get(Authentication authentication, @PathVariable UUID artifactId) {
+    public ArtifactDetails get(Authentication authentication, @PathVariable UUID artifactId) {
         return artifacts.get(CurrentUser.id(authentication), new ArtifactId(artifactId));
     }
 

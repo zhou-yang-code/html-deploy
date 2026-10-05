@@ -31,12 +31,12 @@ public class ProjectController {
     }
 
     @GetMapping("/api/v1/tenants/{tenantId}/projects")
-    List<ProjectSummary> list(Authentication authentication, @PathVariable UUID tenantId) {
+    public List<ProjectSummary> list(Authentication authentication, @PathVariable UUID tenantId) {
         return projects.list(CurrentUser.id(authentication), new TenantId(tenantId));
     }
 
     @PostMapping("/api/v1/tenants/{tenantId}/projects")
-    ProjectSummary create(
+    public ProjectSummary create(
             Authentication authentication,
             @PathVariable UUID tenantId,
             @Valid @RequestBody CreateProjectRequest request
@@ -50,7 +50,7 @@ public class ProjectController {
     }
 
     @GetMapping("/api/v1/projects/{projectId}")
-    ProjectSummary get(Authentication authentication, @PathVariable UUID projectId) {
+    public ProjectSummary get(Authentication authentication, @PathVariable UUID projectId) {
         return projects.get(CurrentUser.id(authentication), new ProjectId(projectId));
     }
 
