@@ -64,7 +64,9 @@ public class NetlifyReleasePublisher implements ReleasePublisher {
                 throw new DomainException("netlify.invalid_response", "Netlify did not return a deploy id");
             }
             JsonNode ready = waitUntilReady(deployId);
-            String url = firstText(ready, "deploy_ssl_url", "ssl_url", "url");
+            String url = StringUtils.hasText(site.publicUrl())
+                    ? site.publicUrl()
+                    : firstText(ready, "ssl_url", "url", "deploy_ssl_url");
             if (!StringUtils.hasText(url)) {
                 throw new DomainException("netlify.invalid_response", "Netlify did not return a public URL");
             }
@@ -89,7 +91,11 @@ public class NetlifyReleasePublisher implements ReleasePublisher {
             if (body.isArray()) {
                 for (JsonNode site : body) {
                     if (siteName.equals(text(site, "name"))) {
-                        return new Site(text(site, "id"), text(site, "name"));
+                        return new Site(
+                                text(site, "id"),
+                                text(site, "name"),
+                                firstText(site, "ssl_url", "url")
+                        );
                     }
                 }
             }
@@ -110,7 +116,11 @@ public class NetlifyReleasePublisher implements ReleasePublisher {
             throw failure("Netlify site creation failed", created);
         }
         JsonNode body = json(created.body());
-        return new Site(text(body, "id"), text(body, "name"));
+        return new Site(
+                text(body, "id"),
+                text(body, "name"),
+                firstText(body, "ssl_url", "url")
+        );
     }
 
     private JsonNode createDeploy(String siteId, Path archive) throws IOException, InterruptedException {
@@ -240,6 +250,6 @@ public class NetlifyReleasePublisher implements ReleasePublisher {
         }
     }
 
-    private record Site(String id, String name) {
+    private record Site(String id, String name, String publicUrl) {
     }
 }

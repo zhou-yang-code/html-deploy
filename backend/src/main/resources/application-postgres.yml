@@ -9,6 +9,7 @@ app:
   public-base-url: ${PUBLIC_BASE_URL:http://localhost:8080}
   content-scheme: ${CONTENT_SCHEME:http}
   content-domain: ${CONTENT_DOMAIN:apps.localhost:8081}
+  site-url-template: ${SITE_URL_TEMPLATE:http://{tenantSlug}-{projectSlug}.apps.localhost:8081}
   storage-root: ${STORAGE_ROOT:/srv/html-deploy}
   nginx-root: ${NGINX_ROOT:/srv/html-deploy/www}
   upload-token-secret: ${UPLOAD_TOKEN_SECRET:replace-this-production-upload-secret}
