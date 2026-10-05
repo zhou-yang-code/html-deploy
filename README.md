@@ -14,11 +14,68 @@
 - 本地文件发布与 Nginx 子域名承载。
 - Docker Compose 一键启动 PostgreSQL、MinIO、后端、控制台和内容节点。
 
+## 下载 Skill 后自动部署
+
+仓库内置 `skills/html-deploy`，安装后可直接让 Codex 完成登录、创建项目、上传 ZIP、等待校验、发布到 Netlify，并返回公开 URL。
+
+### 1. 安装 Skill
+
+```powershell
+npx skills add zhou-yang-code/html-deploy --skill html-deploy -g -a codex --copy
+```
+
+### 2. 配置平台账号
+
+```powershell
+$env:HTML_DEPLOY_API_URL = "https://html-deploy-api-production.up.railway.app"
+$env:HTML_DEPLOY_EMAIL = "<your-email>"
+$env:HTML_DEPLOY_PASSWORD = "<your-password>"
+$skillDir = Join-Path $HOME ".codex\skills\html-deploy"
+```
+
+首次使用且还没有账号时，可先注册：
+
+```powershell
+node "$skillDir\scripts\deploy.mjs" `
+  --register `
+  --file .\dist.zip `
+  --tenant demo-tenant `
+  --tenant-name "Demo Tenant" `
+  --project demo-site `
+  --name "Demo Site"
+```
+
+### 3. 自动发布
+
+```powershell
+node "$skillDir\scripts\deploy.mjs" `
+  --file .\dist.zip `
+  --tenant demo-tenant `
+  --project demo-site `
+  --name "Demo Site" `
+  --environment production
+```
+
+Skill 会自动完成：
+
+1. 登录平台并定位租户和项目。
+2. 项目不存在时自动创建。
+3. 上传 ZIP，等待 artifact 校验为 `READY`。
+4. 创建 deployment，等待 Netlify 发布完成。
+5. 返回 deployment ID、版本、状态和公开的 `https://*.netlify.app` 地址。
+
+在 Codex 中也可以直接说：
+
+```text
+使用 $html-deploy 把 .\dist.zip 部署到 demo-site，并返回公网 URL。
+```
+
 ## 目录
 
 ```text
 backend/                  Spring Boot DDD 分层单体
 frontend/                 Vue 3 控制台
+skills/html-deploy/       自动部署 Skill
 deploy/nginx/            静态站点内容节点
 docker-compose.yml       完整本地环境
 docs/                    技术方案
