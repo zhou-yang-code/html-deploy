@@ -17,8 +17,8 @@ Login:
 
 ```json
 {
-  "email": "owner@example.com",
-  "password": "Password123!"
+  "email": "<your-email>",
+  "password": "<your-password>"
 }
 ```
 

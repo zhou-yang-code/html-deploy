@@ -13,8 +13,8 @@ Prefer `scripts/deploy.mjs` for the complete workflow.
 
 ```powershell
 $env:HTML_DEPLOY_API_URL = "https://html-deploy-api-production.up.railway.app"
-$env:HTML_DEPLOY_EMAIL = "zdemo20261005final@example.com"
-$env:HTML_DEPLOY_PASSWORD = "Password123!"
+$env:HTML_DEPLOY_EMAIL = "<your-email>"
+$env:HTML_DEPLOY_PASSWORD = "<your-password>"
 
 node scripts/deploy.mjs `
   --file .\dist.zip `
