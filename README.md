@@ -21,6 +21,12 @@
 ### 1. 安装 Skill
 
 ```powershell
+npx skills add zhou-yang-code/html-deploy --skill html-deploy --full-depth
+```
+
+skills CLI 会自动识别当前 agent，或在交互界面中让你选择 agent。需要全局安装时追加 `-g`；需要明确安装到 Codex 时可以使用：
+
+```powershell
 npx skills add zhou-yang-code/html-deploy --skill html-deploy --full-depth -g -a codex --copy
 ```
 
