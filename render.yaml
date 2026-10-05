@@ -1,0 +1,48 @@
+databases:
+  - name: html-deploy-db
+    databaseName: html_deploy
+    user: html_deploy
+    plan: free
+
+services:
+  - type: web
+    name: html-deploy-api
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: postgres
+      - key: DATABASE_URL
+        fromDatabase:
+          name: html-deploy-db
+          property: connectionString
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_PUBLIC_ENDPOINT
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_BUCKET
+        value: html-deploy
+      - key: S3_REGION
+        value: auto
+      - key: STORAGE_ROOT
+        value: /tmp/html-deploy
+      - key: NGINX_ROOT
+        value: /tmp/html-deploy/www
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: CONTENT_SCHEME
+        value: https
+      - key: CONTENT_DOMAIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: UPLOAD_TOKEN_SECRET
+        generateValue: true
