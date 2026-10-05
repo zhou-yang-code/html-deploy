@@ -22,3 +22,11 @@ app:
     region: ${S3_REGION:us-east-1}
   security:
     jwt-secret: ${JWT_SECRET:replace-this-production-jwt-secret-with-32-bytes}
+  release:
+    provider: ${RELEASE_PROVIDER:local}
+    poll-interval: ${RELEASE_POLL_INTERVAL:2s}
+    publish-timeout: ${RELEASE_PUBLISH_TIMEOUT:5m}
+  netlify:
+    api-base-url: ${NETLIFY_API_BASE_URL:https://api.netlify.com/api/v1}
+    auth-token: ${NETLIFY_AUTH_TOKEN:}
+    site-prefix: ${NETLIFY_SITE_PREFIX:}
