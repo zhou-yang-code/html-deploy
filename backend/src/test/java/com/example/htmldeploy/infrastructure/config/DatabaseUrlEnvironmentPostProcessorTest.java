@@ -17,4 +17,16 @@ class DatabaseUrlEnvironmentPostProcessorTest {
         assertThat(parsed.username()).isEqualTo("html_user");
         assertThat(parsed.password()).isEqualTo("p@ssword");
     }
+
+    @Test
+    void parsesRailwayPostgresConnectionString() {
+        var parsed = DatabaseUrlEnvironmentPostProcessor.parse(
+                "postgresql://postgres:secret@html-deploy-db.railway.internal:5432/railway"
+        );
+
+        assertThat(parsed.jdbcUrl())
+                .isEqualTo("jdbc:postgresql://html-deploy-db.railway.internal:5432/railway");
+        assertThat(parsed.username()).isEqualTo("postgres");
+        assertThat(parsed.password()).isEqualTo("secret");
+    }
 }
