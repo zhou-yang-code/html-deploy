@@ -9,6 +9,8 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import com.example.htmldeploy.infrastructure.persistence.JdbcTime;
+
 @Repository
 public class JdbcOutboxEventStore {
 
@@ -41,7 +43,7 @@ public class JdbcOutboxEventStore {
                          where id = :id
                         """)
                 .param("id", eventId)
-                .param("publishedAt", Instant.now())
+                .param("publishedAt", JdbcTime.toOffsetDateTime(Instant.now()))
                 .update();
     }
 
@@ -60,7 +62,7 @@ public class JdbcOutboxEventStore {
                 .param("id", message.id())
                 .param("status", status)
                 .param("attempts", nextAttempt)
-                .param("nextAttemptAt", Instant.now().plusSeconds(delaySeconds))
+                .param("nextAttemptAt", JdbcTime.toOffsetDateTime(Instant.now().plusSeconds(delaySeconds)))
                 .param("lastError", abbreviate(error))
                 .update();
     }

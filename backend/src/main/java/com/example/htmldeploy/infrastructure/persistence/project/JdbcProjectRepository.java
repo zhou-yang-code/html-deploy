@@ -16,6 +16,7 @@ import com.example.htmldeploy.domain.project.model.ProjectSlug;
 import com.example.htmldeploy.domain.project.model.ProjectStatus;
 import com.example.htmldeploy.domain.project.repository.ProjectRepository;
 import com.example.htmldeploy.infrastructure.persistence.identity.JdbcUserAccountRepository;
+import com.example.htmldeploy.infrastructure.persistence.JdbcTime;
 
 @Repository
 public class JdbcProjectRepository implements ProjectRepository {
@@ -40,7 +41,7 @@ public class JdbcProjectRepository implements ProjectRepository {
                 .param("name", project.name())
                 .param("slug", project.slug().value())
                 .param("status", project.status().name())
-                .param("updatedAt", project.updatedAt())
+                .param("updatedAt", JdbcTime.toOffsetDateTime(project.updatedAt()))
                 .update();
         if (updated == 0) {
             jdbc.sql("""
@@ -52,8 +53,8 @@ public class JdbcProjectRepository implements ProjectRepository {
                     .param("name", project.name())
                     .param("slug", project.slug().value())
                     .param("status", project.status().name())
-                    .param("createdAt", project.createdAt())
-                    .param("updatedAt", project.updatedAt())
+                    .param("createdAt", JdbcTime.toOffsetDateTime(project.createdAt()))
+                    .param("updatedAt", JdbcTime.toOffsetDateTime(project.updatedAt()))
                     .update();
         }
         return project;

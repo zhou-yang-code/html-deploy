@@ -17,6 +17,7 @@ import com.example.htmldeploy.domain.deployment.model.DeploymentStatus;
 import com.example.htmldeploy.domain.deployment.repository.DeploymentRepository;
 import com.example.htmldeploy.domain.project.model.ProjectId;
 import com.example.htmldeploy.infrastructure.persistence.identity.JdbcUserAccountRepository;
+import com.example.htmldeploy.infrastructure.persistence.JdbcTime;
 
 @Repository
 public class JdbcDeploymentRepository implements DeploymentRepository {
@@ -42,8 +43,8 @@ public class JdbcDeploymentRepository implements DeploymentRepository {
                 .param("status", deployment.status().name())
                 .param("releasePath", deployment.releasePath())
                 .param("errorCode", deployment.errorCode())
-                .param("updatedAt", deployment.updatedAt())
-                .param("finishedAt", deployment.finishedAt())
+                .param("updatedAt", JdbcTime.toOffsetDateTime(deployment.updatedAt()))
+                .param("finishedAt", JdbcTime.toOffsetDateTime(deployment.finishedAt()))
                 .update();
         if (updated == 0) {
             jdbc.sql("""
@@ -64,9 +65,9 @@ public class JdbcDeploymentRepository implements DeploymentRepository {
                     .param("status", deployment.status().name())
                     .param("releasePath", deployment.releasePath())
                     .param("errorCode", deployment.errorCode())
-                    .param("createdAt", deployment.createdAt())
-                    .param("updatedAt", deployment.updatedAt())
-                    .param("finishedAt", deployment.finishedAt())
+                    .param("createdAt", JdbcTime.toOffsetDateTime(deployment.createdAt()))
+                    .param("updatedAt", JdbcTime.toOffsetDateTime(deployment.updatedAt()))
+                    .param("finishedAt", JdbcTime.toOffsetDateTime(deployment.finishedAt()))
                     .update();
         }
         return deployment;

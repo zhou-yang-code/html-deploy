@@ -14,6 +14,7 @@ import com.example.htmldeploy.domain.deployment.model.ReleaseChannel;
 import com.example.htmldeploy.domain.deployment.repository.ReleaseChannelRepository;
 import com.example.htmldeploy.domain.project.model.ProjectId;
 import com.example.htmldeploy.infrastructure.persistence.identity.JdbcUserAccountRepository;
+import com.example.htmldeploy.infrastructure.persistence.JdbcTime;
 
 @Repository
 public class JdbcReleaseChannelRepository implements ReleaseChannelRepository {
@@ -36,7 +37,7 @@ public class JdbcReleaseChannelRepository implements ReleaseChannelRepository {
                 .param("activeDeploymentId", channel.activeDeploymentId() == null
                         ? null
                         : channel.activeDeploymentId().value())
-                .param("updatedAt", channel.updatedAt())
+                .param("updatedAt", JdbcTime.toOffsetDateTime(channel.updatedAt()))
                 .update();
         if (updated == 0) {
             jdbc.sql("""
@@ -53,7 +54,7 @@ public class JdbcReleaseChannelRepository implements ReleaseChannelRepository {
                     .param("activeDeploymentId", channel.activeDeploymentId() == null
                             ? null
                             : channel.activeDeploymentId().value())
-                    .param("updatedAt", channel.updatedAt())
+                    .param("updatedAt", JdbcTime.toOffsetDateTime(channel.updatedAt()))
                     .update();
         }
         return channel;

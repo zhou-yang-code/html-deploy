@@ -12,6 +12,7 @@ import com.example.htmldeploy.domain.identity.model.Tenant;
 import com.example.htmldeploy.domain.identity.model.TenantId;
 import com.example.htmldeploy.domain.identity.model.TenantSlug;
 import com.example.htmldeploy.domain.identity.repository.TenantRepository;
+import com.example.htmldeploy.infrastructure.persistence.JdbcTime;
 
 @Repository
 public class JdbcTenantRepository implements TenantRepository {
@@ -42,7 +43,7 @@ public class JdbcTenantRepository implements TenantRepository {
                     .param("id", tenant.id().value())
                     .param("name", tenant.name())
                     .param("slug", tenant.slug().value())
-                    .param("createdAt", tenant.createdAt())
+                    .param("createdAt", JdbcTime.toOffsetDateTime(tenant.createdAt()))
                     .update();
         }
         return tenant;
