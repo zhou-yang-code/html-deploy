@@ -58,10 +58,10 @@ public class ApiExceptionHandler {
     }
 
     private HttpStatus statusFor(String code) {
-        if (code.endsWith("_not_found")) {
+        if (code.endsWith("not_found")) {
             return HttpStatus.NOT_FOUND;
         }
-        if (code.endsWith("_exists") || code.equals("project.slug_exists") || code.equals("artifact.not_ready")) {
+        if (code.endsWith("exists") || code.endsWith("not_ready")) {
             return HttpStatus.CONFLICT;
         }
         return HttpStatus.BAD_REQUEST;
