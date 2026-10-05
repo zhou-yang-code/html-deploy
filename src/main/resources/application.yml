@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: html-deploy-backend
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:h2:file:./data/db/html-deploy;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  flyway:
+    enabled: true
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+app:
+  public-base-url: http://localhost:8080
+  content-scheme: http
+  content-domain: apps.localhost:8081
+  storage-root: ./data
+  nginx-root: ./data/www
+  upload-token-secret: local-development-upload-token-secret
+  upload-url-ttl: 15m
+  archive-limits:
+    max-zip-bytes: 104857600
+    max-expanded-bytes: 524288000
+    max-files: 10000
+    max-path-length: 512
+  security:
+    jwt-secret: local-development-secret-key-must-be-at-least-32-bytes
+    access-token-ttl: 12h
+    refresh-token-ttl: 7d
+    issuer: html-deploy
+    allowed-origins:
+      - http://localhost:5173
+      - http://127.0.0.1:5173
+  worker:
+    fixed-delay-ms: 2000
+  release:
+    provider: local
+    poll-interval: 2s
+    publish-timeout: 5m
+  netlify:
+    api-base-url: https://api.netlify.com/api/v1
+    auth-token: ${NETLIFY_AUTH_TOKEN:}
+    site-prefix: ${NETLIFY_SITE_PREFIX:}
+
+logging:
+  level:
+    com.example.htmldeploy: INFO
