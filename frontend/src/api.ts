@@ -116,6 +116,18 @@ export const api = {
     return request<ProjectSummary>(`/api/v1/projects/${projectId}`)
   },
 
+  archiveProject(projectId: string) {
+    return request<ProjectSummary>(`/api/v1/projects/${projectId}/archive`, {
+      method: 'POST',
+    })
+  },
+
+  deleteProject(projectId: string) {
+    return request<void>(`/api/v1/projects/${projectId}`, {
+      method: 'DELETE',
+    })
+  },
+
   createUpload(projectId: string, originalFilename: string) {
     return request<ArtifactUpload>(`/api/v1/projects/${projectId}/artifacts`, {
       method: 'POST',

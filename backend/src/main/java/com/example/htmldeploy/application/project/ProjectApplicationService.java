@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.htmldeploy.application.identity.IdentityApplicationService;
 import com.example.htmldeploy.application.identity.IdentityApplicationService.TenantSummary;
 import com.example.htmldeploy.application.port.SiteUrlResolver;
+import com.example.htmldeploy.application.project.port.ProjectDeletionPort;
+import com.example.htmldeploy.application.project.port.ProjectResourceCleaner;
 import com.example.htmldeploy.application.shared.SlugGenerator;
 import com.example.htmldeploy.domain.identity.model.Role;
 import com.example.htmldeploy.domain.identity.model.TenantId;
@@ -26,15 +28,21 @@ public class ProjectApplicationService {
     private final ProjectRepository projects;
     private final IdentityApplicationService identity;
     private final SiteUrlResolver siteUrls;
+    private final ProjectDeletionPort projectDeletion;
+    private final ProjectResourceCleaner resourceCleaner;
 
     public ProjectApplicationService(
             ProjectRepository projects,
             IdentityApplicationService identity,
-            SiteUrlResolver siteUrls
+            SiteUrlResolver siteUrls,
+            ProjectDeletionPort projectDeletion,
+            ProjectResourceCleaner resourceCleaner
     ) {
         this.projects = projects;
         this.identity = identity;
         this.siteUrls = siteUrls;
+        this.projectDeletion = projectDeletion;
+        this.resourceCleaner = resourceCleaner;
     }
 
     @Transactional
@@ -55,6 +63,7 @@ public class ProjectApplicationService {
     public List<ProjectSummary> list(UserId actorId, TenantId tenantId) {
         identity.requireTenantRole(actorId, tenantId, Role.VIEWER, Role.DEVELOPER, Role.MAINTAINER);
         return projects.findByTenantId(tenantId).stream()
+                .filter(project -> project.status() == com.example.htmldeploy.domain.project.model.ProjectStatus.ACTIVE)
                 .map(project -> summary(actorId, project))
                 .toList();
     }
@@ -65,6 +74,30 @@ public class ProjectApplicationService {
                 actorId,
                 requireProject(actorId, projectId, Role.VIEWER, Role.DEVELOPER, Role.MAINTAINER).project()
         );
+    }
+
+    @Transactional
+    public ProjectSummary archive(UserId actorId, ProjectId projectId) {
+        Project project = projects.findById(projectId)
+                .orElseThrow(() -> new DomainException("project.not_found", "project not found"));
+        identity.requireTenantRole(actorId, project.tenantId(), Role.OWNER);
+        project.archive();
+        projects.save(project);
+        return summary(actorId, project);
+    }
+
+    @Transactional
+    public void delete(UserId actorId, ProjectId projectId) {
+        Project project = projects.findById(projectId)
+                .orElseThrow(() -> new DomainException("project.not_found", "project not found"));
+        identity.requireTenantRole(actorId, project.tenantId(), Role.OWNER);
+        TenantSummary tenant = identity.tenantSummary(actorId, project.tenantId());
+        resourceCleaner.deleteExternalResources(
+                tenant.slug(),
+                project.slug().value(),
+                project.id().value()
+        );
+        projectDeletion.deletePlatformData(projectId);
     }
 
     @Transactional(readOnly = true)
