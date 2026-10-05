@@ -8,7 +8,6 @@
 | --- | --- |
 | 控制台 | https://html-deploy-console-zhou-yang-code.netlify.app |
 | 后端健康检查 | https://html-deploy-api-production.up.railway.app/actuator/health |
-| 自托管内容示例 | https://html-deploy-api-production.up.railway.app/sites/zdemo20261005final-huarong-dao/ |
 
 后端 API 根路径不提供 HTML 页面，不能直接当网站打开。业务接口前缀为：
 
