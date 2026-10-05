@@ -1,0 +1,12 @@
+package com.example.htmldeploy.infrastructure.messaging;
+
+import java.util.UUID;
+
+public record OutboxMessage(
+        UUID id,
+        String eventType,
+        UUID aggregateId,
+        String payload,
+        int attempts
+) {
+}
