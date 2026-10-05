@@ -7,10 +7,16 @@
 | 服务 | 地址 |
 | --- | --- |
 | 控制台 | https://html-deploy-console-zhou-yang-code.netlify.app |
-| 后端 API | https://html-deploy-api-production.up.railway.app |
 | 后端健康检查 | https://html-deploy-api-production.up.railway.app/actuator/health |
 | 自托管内容示例 | https://html-deploy-api-production.up.railway.app/sites/zdemo20261005final-huarong-dao/ |
-| Netlify 内容示例 | https://zdemo20261005final-huarong-dao-4384a449.netlify.app/ |
+
+后端 API 根路径不提供 HTML 页面，不能直接当网站打开。业务接口前缀为：
+
+```text
+https://html-deploy-api-production.up.railway.app/api/v1
+```
+
+服务是否在线请访问“后端健康检查”链接。
 
 演示项目：[华容道小游戏](games/huarong-dao/index.html)
 
