@@ -21,7 +21,7 @@
 ### 1. 安装 Skill
 
 ```powershell
-npx skills add zhou-yang-code/html-deploy --skill html-deploy -g -a codex --copy
+npx skills add zhou-yang-code/html-deploy --skill html-deploy --full-depth -g -a codex --copy
 ```
 
 ### 2. 配置平台账号
