@@ -61,7 +61,7 @@ interfaces/application/domain/infrastructure
 
 ## 安装部署 Skill
 
-仓库内置 `skills/html-deploy` 技能。安装后，支持任意兼容 Skills 运行时，可自动完成登录、定位租户与项目、上传 ZIP 压缩包、等待校验、创建部署并返回最终公开访问 URL
+仓库内置 `skills/html-deploy` 技能。安装后，支持任意兼容 Skills Agent工具，可自动完成登录、定位租户与项目、上传 ZIP 压缩包、等待校验、创建部署并返回最终公开访问 URL
 ```powershell
 npx skills add zhou-yang-code/html-deploy --skill html-deploy --full-depth
 ```
