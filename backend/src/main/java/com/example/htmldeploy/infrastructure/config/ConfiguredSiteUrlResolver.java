@@ -15,12 +15,9 @@ public class ConfiguredSiteUrlResolver implements SiteUrlResolver {
 
     @Override
     public String resolve(String tenantSlug, String projectSlug) {
-        return properties.contentScheme()
-                + "://"
-                + tenantSlug
-                + "-"
-                + projectSlug
-                + "."
-                + properties.contentDomain();
+        return properties.siteUrlTemplate()
+                .replace("{tenantSlug}", tenantSlug)
+                .replace("{projectSlug}", projectSlug)
+                .replace("{site}", tenantSlug + "-" + projectSlug);
     }
 }

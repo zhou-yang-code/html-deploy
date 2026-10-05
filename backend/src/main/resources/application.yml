@@ -30,6 +30,7 @@ app:
   public-base-url: http://localhost:8080
   content-scheme: http
   content-domain: apps.localhost:8081
+  site-url-template: http://{tenantSlug}-{projectSlug}.apps.localhost:8081
   storage-root: ./data
   nginx-root: ./data/www
   upload-token-secret: local-development-upload-token-secret

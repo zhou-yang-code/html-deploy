@@ -10,6 +10,7 @@ public record AppProperties(
         String publicBaseUrl,
         String contentScheme,
         String contentDomain,
+        String siteUrlTemplate,
         Path storageRoot,
         Path nginxRoot,
         String uploadTokenSecret,
@@ -20,6 +21,10 @@ public record AppProperties(
         publicBaseUrl = defaultIfBlank(publicBaseUrl, "http://localhost:8080");
         contentScheme = defaultIfBlank(contentScheme, "http");
         contentDomain = defaultIfBlank(contentDomain, "apps.localhost:8081");
+        siteUrlTemplate = defaultIfBlank(
+                siteUrlTemplate,
+                "http://{tenantSlug}-{projectSlug}.apps.localhost:8081"
+        );
         storageRoot = storageRoot == null ? Path.of("./data") : storageRoot;
         nginxRoot = nginxRoot == null ? Path.of("./data/www") : nginxRoot;
         uploadTokenSecret = defaultIfBlank(uploadTokenSecret, "change-me-in-production-change-me");
