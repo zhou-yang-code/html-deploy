@@ -1,0 +1,24 @@
+name: Bootstrap repository
+
+on:
+  push:
+    paths:
+      - bootstrap-source.zip
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract repository source
+        run: |
+          unzip -o bootstrap-source.zip -d .
+          rm -f bootstrap-source.zip
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Import html-deploy project"
+          git push origin HEAD:main
