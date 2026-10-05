@@ -56,7 +56,12 @@ public class NetlifyReleasePublisher implements ReleasePublisher {
         }
         Path archive = null;
         try {
-            Site site = resolveSite(siteName(request));
+            Site site = resolveSite(NetlifySiteName.from(
+                    netlify.sitePrefix(),
+                    request.tenantSlug(),
+                    request.projectSlug(),
+                    request.projectId()
+            ));
             archive = createArchive(request.artifactContentDirectory());
             JsonNode deploy = createDeploy(site.id(), archive);
             String deployId = text(deploy, "id");
@@ -216,20 +221,6 @@ public class NetlifyReleasePublisher implements ReleasePublisher {
             }
         }
         return null;
-    }
-
-    private String siteName(ReleasePublishRequest request) {
-        String suffix = request.projectId().toString().substring(0, 8);
-        String name = netlify.sitePrefix()
-                + request.tenantSlug()
-                + "-"
-                + request.projectSlug()
-                + "-"
-                + suffix;
-        name = name.toLowerCase().replaceAll("[^a-z0-9-]", "-")
-                .replaceAll("-{2,}", "-")
-                .replaceAll("^-|-$", "");
-        return name.length() > 63 ? name.substring(0, 63).replaceAll("-+$", "") : name;
     }
 
     private String abbreviate(String value) {

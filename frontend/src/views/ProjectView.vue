@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  Archive,
   ArrowLeft,
   CircleCheck,
   Clock3,
@@ -9,6 +10,7 @@ import {
   RefreshCw,
   RotateCcw,
   Rocket,
+  Trash2,
   TriangleAlert,
 } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -47,6 +49,36 @@ async function refresh() {
     error.value = cause instanceof Error ? cause.message : '项目加载失败'
   } finally {
     loading.value = false
+  }
+}
+
+async function archiveProject() {
+  if (!project.value || !window.confirm(`确认归档“${project.value.name}”？归档后项目会从列表隐藏，数据仍保留。`)) {
+    return
+  }
+  error.value = ''
+  try {
+    await api.archiveProject(projectId.value)
+    await router.push('/projects')
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : '项目归档失败'
+  }
+}
+
+async function deleteProject() {
+  if (!project.value) {
+    return
+  }
+  const confirmation = window.prompt(`此操作会删除项目、部署历史和对应 Netlify Site，且不可恢复。\n请输入项目标识 ${project.value.slug} 确认：`)
+  if (confirmation !== project.value.slug) {
+    return
+  }
+  error.value = ''
+  try {
+    await api.deleteProject(projectId.value)
+    await router.push('/projects')
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : '项目删除失败'
   }
 }
 
@@ -175,10 +207,18 @@ onBeforeUnmount(() => {
           </a>
         </p>
       </div>
-      <button class="button" type="button" @click="refresh">
-        <RefreshCw :size="16" />
-        刷新
-      </button>
+      <div class="header-actions">
+        <button class="icon-button" type="button" title="归档项目" @click="archiveProject">
+          <Archive :size="17" />
+        </button>
+        <button class="icon-button icon-button--danger" type="button" title="删除项目" @click="deleteProject">
+          <Trash2 :size="17" />
+        </button>
+        <button class="button" type="button" @click="refresh">
+          <RefreshCw :size="16" />
+          刷新
+        </button>
+      </div>
     </div>
 
     <div v-if="error" class="error-banner">{{ error }}</div>
@@ -305,6 +345,16 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 4px;
   color: #167d7f;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-button--danger {
+  color: #9f2f2f;
 }
 
 .active-strip {
