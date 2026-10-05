@@ -64,7 +64,7 @@ public class NetlifyReleasePublisher implements ReleasePublisher {
                 throw new DomainException("netlify.invalid_response", "Netlify did not return a deploy id");
             }
             JsonNode ready = waitUntilReady(deployId);
-            String url = firstText(ready, "deploy_ssl_url", "ssl_url", "url");
+            String url = firstText(ready, "ssl_url", "url", "deploy_ssl_url");
             if (!StringUtils.hasText(url)) {
                 throw new DomainException("netlify.invalid_response", "Netlify did not return a public URL");
             }
