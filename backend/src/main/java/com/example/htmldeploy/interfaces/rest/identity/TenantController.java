@@ -35,17 +35,17 @@ public class TenantController {
     }
 
     @GetMapping
-    List<TenantSummary> list(Authentication authentication) {
+    public List<TenantSummary> list(Authentication authentication) {
         return identity.listTenants(CurrentUser.id(authentication));
     }
 
     @GetMapping("/{tenantId}/members")
-    List<MemberSummary> members(Authentication authentication, @PathVariable UUID tenantId) {
+    public List<MemberSummary> members(Authentication authentication, @PathVariable UUID tenantId) {
         return identity.listMembers(CurrentUser.id(authentication), new TenantId(tenantId));
     }
 
     @PostMapping("/{tenantId}/members")
-    MemberSummary addMember(
+    public MemberSummary addMember(
             Authentication authentication,
             @PathVariable UUID tenantId,
             @Valid @RequestBody AddMemberRequest request

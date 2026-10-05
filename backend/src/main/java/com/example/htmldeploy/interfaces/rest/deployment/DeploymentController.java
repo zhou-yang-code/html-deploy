@@ -36,7 +36,7 @@ public class DeploymentController {
     }
 
     @PostMapping("/projects/{projectId}/deployments")
-    DeploymentDetails create(
+    public DeploymentDetails create(
             Authentication authentication,
             @PathVariable UUID projectId,
             @Valid @RequestBody CreateDeploymentRequest request
@@ -50,17 +50,17 @@ public class DeploymentController {
     }
 
     @GetMapping("/projects/{projectId}/deployments")
-    List<DeploymentDetails> list(Authentication authentication, @PathVariable UUID projectId) {
+    public List<DeploymentDetails> list(Authentication authentication, @PathVariable UUID projectId) {
         return deployments.list(CurrentUser.id(authentication), new ProjectId(projectId));
     }
 
     @GetMapping("/deployments/{deploymentId}")
-    DeploymentDetails get(Authentication authentication, @PathVariable UUID deploymentId) {
+    public DeploymentDetails get(Authentication authentication, @PathVariable UUID deploymentId) {
         return deployments.get(CurrentUser.id(authentication), new DeploymentId(deploymentId));
     }
 
     @PostMapping("/deployments/{deploymentId}/rollback")
-    DeploymentDetails rollback(Authentication authentication, @PathVariable UUID deploymentId) {
+    public DeploymentDetails rollback(Authentication authentication, @PathVariable UUID deploymentId) {
         return deployments.rollback(new RollbackCommand(
                 CurrentUser.id(authentication),
                 new DeploymentId(deploymentId)
