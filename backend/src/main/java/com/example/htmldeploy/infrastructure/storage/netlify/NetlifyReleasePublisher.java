@@ -80,15 +80,18 @@ public class NetlifyReleasePublisher implements ReleasePublisher {
 
     private Site resolveSite(String siteName) throws IOException, InterruptedException {
         HttpResponse<String> existing = send(HttpRequest.newBuilder()
-                .uri(uri("/sites/" + siteName))
+                .uri(uri("/sites?name=" + siteName))
                 .header("Authorization", authorization())
                 .GET()
                 .build());
         if (existing.statusCode() == 200) {
             JsonNode body = json(existing.body());
-            return new Site(text(body, "id"), text(body, "name"));
+            if (body.isArray() && !body.isEmpty()) {
+                JsonNode site = body.get(0);
+                return new Site(text(site, "id"), text(site, "name"));
+            }
         }
-        if (existing.statusCode() != 404) {
+        if (existing.statusCode() != 200 && existing.statusCode() != 404) {
             throw failure("Netlify site lookup failed", existing);
         }
 
