@@ -20,6 +20,7 @@ import com.example.htmldeploy.application.deployment.DeploymentApplicationServic
 import com.example.htmldeploy.application.deployment.DeploymentApplicationService.CreateDeploymentCommand;
 import com.example.htmldeploy.application.deployment.DeploymentApplicationService.DeploymentDetails;
 import com.example.htmldeploy.application.deployment.DeploymentApplicationService.RollbackCommand;
+import com.example.htmldeploy.application.deployment.port.ReleaseProviderCatalog;
 import com.example.htmldeploy.domain.artifact.model.ArtifactId;
 import com.example.htmldeploy.domain.deployment.model.DeploymentId;
 import com.example.htmldeploy.domain.project.model.ProjectId;
@@ -30,9 +31,14 @@ import com.example.htmldeploy.interfaces.rest.security.CurrentUser;
 public class DeploymentController {
 
     private final DeploymentApplicationService deployments;
+    private final ReleaseProviderCatalog releaseProviders;
 
-    public DeploymentController(DeploymentApplicationService deployments) {
+    public DeploymentController(
+            DeploymentApplicationService deployments,
+            ReleaseProviderCatalog releaseProviders
+    ) {
         this.deployments = deployments;
+        this.releaseProviders = releaseProviders;
     }
 
     @PostMapping("/projects/{projectId}/deployments")
@@ -45,8 +51,17 @@ public class DeploymentController {
                 CurrentUser.id(authentication),
                 new ProjectId(projectId),
                 new ArtifactId(request.artifactId()),
-                request.environment()
+                request.environment(),
+                request.provider()
         ));
+    }
+
+    @GetMapping("/release-providers")
+    public ReleaseProviderInfo releaseProviders() {
+        return new ReleaseProviderInfo(
+                releaseProviders.defaultProvider(),
+                releaseProviders.supportedProviders()
+        );
     }
 
     @GetMapping("/projects/{projectId}/deployments")
@@ -69,7 +84,14 @@ public class DeploymentController {
 
     public record CreateDeploymentRequest(
             @NotNull UUID artifactId,
-            @NotBlank @Size(max = 64) String environment
+            @NotBlank @Size(max = 64) String environment,
+            @Size(max = 32) String provider
+    ) {
+    }
+
+    public record ReleaseProviderInfo(
+            String defaultProvider,
+            List<String> providers
     ) {
     }
 }

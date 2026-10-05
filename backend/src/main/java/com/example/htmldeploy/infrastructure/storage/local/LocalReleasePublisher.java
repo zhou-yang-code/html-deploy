@@ -6,14 +6,12 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 import org.springframework.stereotype.Component;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import com.example.htmldeploy.domain.deployment.port.ReleasePublishRequest;
 import com.example.htmldeploy.domain.deployment.port.ReleasePublisher;
 import com.example.htmldeploy.infrastructure.config.AppProperties;
 
 @Component
-@ConditionalOnProperty(name = "app.release.provider", havingValue = "local", matchIfMissing = true)
 public class LocalReleasePublisher implements ReleasePublisher {
 
     private final Path releasesRoot;

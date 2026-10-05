@@ -21,7 +21,8 @@ node scripts/deploy.mjs `
   --tenant demo-tenant `
   --project demo-site `
   --name "Demo Site" `
-  --environment production
+  --environment production `
+  --provider netlify
 ```
 
 The script:
@@ -59,6 +60,21 @@ Read credentials from environment variables. Do not print passwords, JWTs, refre
 | Tenant slug | `--tenant` | first tenant when unambiguous |
 | Project slug | `--project` | required |
 | Environment | `--environment` | `production` |
+| Release provider | `--provider` | platform default (`GET /api/v1/release-providers`) |
+
+## Release Providers
+
+The platform exposes an optional per-deployment release provider:
+
+| Provider | Result | Typical use |
+| --- | --- | --- |
+| `netlify` | `https://{site}.netlify.app` | shareable public links with CDN |
+| `local` | `{SITE_URL_TEMPLATE}` content endpoint | verifying the platform's own publishing path |
+
+Omit `--provider` to use the platform default. Use
+`GET /api/v1/release-providers` to read `defaultProvider` and `providers`
+before selecting a mode. Provider is stored on the deployment, so rollback
+reuses the original provider.
 
 The ZIP is validated by the platform. It must:
 

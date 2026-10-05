@@ -17,7 +17,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { api } from '@/api'
-import type { DeploymentDetails, ProjectSummary } from '@/types'
+import type { DeploymentDetails, ProjectSummary, ReleaseProviderInfo } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,6 +25,8 @@ const projectId = computed(() => String(route.params.projectId))
 const project = ref<ProjectSummary | null>(null)
 const deployments = ref<DeploymentDetails[]>([])
 const selectedFile = ref<File | null>(null)
+const providers = ref<ReleaseProviderInfo | null>(null)
+const selectedProvider = ref('')
 const loading = ref(true)
 const deploying = ref(false)
 const phase = ref('')
@@ -41,10 +43,17 @@ async function loadDeployments() {
   deployments.value = await api.deployments(projectId.value)
 }
 
+async function loadProviders() {
+  providers.value = await api.releaseProviders()
+  if (!selectedProvider.value) {
+    selectedProvider.value = providers.value.defaultProvider
+  }
+}
+
 async function refresh() {
   error.value = ''
   try {
-    await Promise.all([loadProject(), loadDeployments()])
+    await Promise.all([loadProject(), loadDeployments(), loadProviders()])
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '项目加载失败'
   } finally {
@@ -103,7 +112,12 @@ async function deploy() {
     phase.value = '等待产物校验'
     await waitForArtifact(upload.artifactId)
     phase.value = '创建部署'
-    const deployment = await api.createDeployment(projectId.value, upload.artifactId)
+    const deployment = await api.createDeployment(
+      projectId.value,
+      upload.artifactId,
+      'production',
+      selectedProvider.value || undefined,
+    )
     phase.value = '发布到内容目录'
     await waitForDeployment(deployment.id)
     phase.value = '发布完成'
@@ -167,6 +181,16 @@ async function rollback(deployment: DeploymentDetails) {
 
 function statusClass(status: DeploymentDetails['status']) {
   return `status-${status.toLowerCase()}`
+}
+
+function providerLabel(provider: string) {
+  if (provider === 'netlify') {
+    return 'Netlify'
+  }
+  if (provider === 'local') {
+    return '自托管'
+  }
+  return provider
 }
 
 function formatTime(value?: string) {
@@ -252,6 +276,14 @@ onBeforeUnmount(() => {
             <span>压缩包根目录必须包含 index.html</span>
           </label>
           <div class="deploy-action">
+            <label v-if="providers" class="provider-select">
+              <span>发布模式</span>
+              <select v-model="selectedProvider">
+                <option v-for="provider in providers.providers" :key="provider" :value="provider">
+                  {{ providerLabel(provider) }}
+                </option>
+              </select>
+            </label>
             <div v-if="deploying" class="deploy-progress">
               <span class="spinner spinner--dark" />
               {{ phase }}
@@ -286,6 +318,7 @@ onBeforeUnmount(() => {
                 <th>版本</th>
                 <th>状态</th>
                 <th>环境</th>
+                <th>模式</th>
                 <th>创建时间</th>
                 <th>完成时间</th>
                 <th>错误</th>
@@ -301,6 +334,7 @@ onBeforeUnmount(() => {
                   </span>
                 </td>
                 <td>{{ deployment.environment }}</td>
+                <td>{{ providerLabel(deployment.provider) }}</td>
                 <td>{{ formatTime(deployment.createdAt) }}</td>
                 <td>{{ formatTime(deployment.finishedAt) }}</td>
                 <td class="error-cell">
@@ -428,6 +462,24 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 12px;
   justify-items: end;
+}
+
+.provider-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #53616f;
+  font-size: 13px;
+}
+
+.provider-select select {
+  min-width: 168px;
+  padding: 8px 10px;
+  border: 1px solid #cfd8df;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #212b36;
+  font: inherit;
 }
 
 .deploy-progress {

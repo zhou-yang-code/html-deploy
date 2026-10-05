@@ -4,6 +4,7 @@ import type {
   AuthResult,
   DeploymentDetails,
   ProjectSummary,
+  ReleaseProviderInfo,
   TenantSummary,
   UserSummary,
 } from '@/types'
@@ -162,10 +163,19 @@ export const api = {
     return request<DeploymentDetails[]>(`/api/v1/projects/${projectId}/deployments`)
   },
 
-  createDeployment(projectId: string, artifactId: string, environment = 'production') {
+  releaseProviders() {
+    return request<ReleaseProviderInfo>('/api/v1/release-providers')
+  },
+
+  createDeployment(
+    projectId: string,
+    artifactId: string,
+    environment = 'production',
+    provider?: string,
+  ) {
     return request<DeploymentDetails>(`/api/v1/projects/${projectId}/deployments`, {
       method: 'POST',
-      body: JSON.stringify({ artifactId, environment }),
+      body: JSON.stringify(provider ? { artifactId, environment, provider } : { artifactId, environment }),
     })
   },
 

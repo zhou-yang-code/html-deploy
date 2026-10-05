@@ -65,6 +65,7 @@ export interface DeploymentDetails {
   projectId: string
   artifactId: string
   environment: string
+  provider: string
   version: number
   status: DeploymentStatus
   releasePath?: string
@@ -73,4 +74,9 @@ export interface DeploymentDetails {
   createdAt: string
   updatedAt: string
   finishedAt?: string
+}
+
+export interface ReleaseProviderInfo {
+  defaultProvider: string
+  providers: string[]
 }

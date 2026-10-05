@@ -15,6 +15,7 @@ public record DeploymentRequestedEvent(
         UUID projectId,
         UUID artifactId,
         String environment,
+        String provider,
         long version
 ) implements DomainEvent {
 
@@ -27,6 +28,7 @@ public record DeploymentRequestedEvent(
                 deployment.projectId().value(),
                 deployment.artifactId().value(),
                 deployment.environment(),
+                deployment.provider(),
                 deployment.version()
         );
     }
@@ -46,6 +48,7 @@ public record DeploymentRequestedEvent(
         return Map.of(
                 "artifactId", artifactId,
                 "environment", environment,
+                "provider", provider,
                 "version", version
         );
     }

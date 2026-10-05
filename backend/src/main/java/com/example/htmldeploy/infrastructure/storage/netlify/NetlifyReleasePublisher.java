@@ -15,7 +15,6 @@ import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -28,7 +27,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
-@ConditionalOnProperty(name = "app.release.provider", havingValue = "netlify")
 public class NetlifyReleasePublisher implements ReleasePublisher {
 
     private final HttpClient httpClient;

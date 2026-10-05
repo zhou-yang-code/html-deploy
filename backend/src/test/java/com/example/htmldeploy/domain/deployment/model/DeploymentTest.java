@@ -19,6 +19,7 @@ class DeploymentTest {
                 new ProjectId(UUID.randomUUID()),
                 new ArtifactId(UUID.randomUUID()),
                 "production",
+                "local",
                 1
         );
 
@@ -36,11 +37,25 @@ class DeploymentTest {
                 new ProjectId(UUID.randomUUID()),
                 new ArtifactId(UUID.randomUUID()),
                 "production",
+                "netlify",
                 1
         );
 
         assertThatThrownBy(() -> deployment.activate("/srv/releases/v1"))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("not deploying");
+    }
+
+    @Test
+    void keepsReleaseProvider() {
+        Deployment deployment = Deployment.create(
+                new ProjectId(UUID.randomUUID()),
+                new ArtifactId(UUID.randomUUID()),
+                "production",
+                "Netlify",
+                1
+        );
+
+        assertThat(deployment.provider()).isEqualTo("netlify");
     }
 }

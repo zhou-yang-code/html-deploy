@@ -49,17 +49,18 @@ public class JdbcDeploymentRepository implements DeploymentRepository {
         if (updated == 0) {
             jdbc.sql("""
                             insert into deployment (
-                                id, project_id, environment, artifact_id, version, status,
+                                id, project_id, environment, provider, artifact_id, version, status,
                                 release_path, error_code, created_at, updated_at, finished_at
                             )
                             values (
-                                :id, :projectId, :environment, :artifactId, :version, :status,
+                                :id, :projectId, :environment, :provider, :artifactId, :version, :status,
                                 :releasePath, :errorCode, :createdAt, :updatedAt, :finishedAt
                             )
                             """)
                     .param("id", deployment.id().value())
                     .param("projectId", deployment.projectId().value())
                     .param("environment", deployment.environment())
+                    .param("provider", deployment.provider())
                     .param("artifactId", deployment.artifactId().value())
                     .param("version", deployment.version())
                     .param("status", deployment.status().name())
@@ -132,7 +133,7 @@ public class JdbcDeploymentRepository implements DeploymentRepository {
 
     private String baseSelect() {
         return """
-                select id, project_id, environment, artifact_id, version, status,
+                select id, project_id, environment, provider, artifact_id, version, status,
                        release_path, error_code, created_at, updated_at, finished_at
                   from deployment
                 """;
@@ -143,6 +144,7 @@ public class JdbcDeploymentRepository implements DeploymentRepository {
                 new DeploymentId(JdbcUserAccountRepository.uuid(rs, "id")),
                 new ProjectId(JdbcUserAccountRepository.uuid(rs, "project_id")),
                 rs.getString("environment"),
+                rs.getString("provider"),
                 new ArtifactId(JdbcUserAccountRepository.uuid(rs, "artifact_id")),
                 rs.getLong("version"),
                 DeploymentStatus.valueOf(rs.getString("status")),

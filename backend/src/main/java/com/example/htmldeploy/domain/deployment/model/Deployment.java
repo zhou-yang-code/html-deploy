@@ -11,6 +11,7 @@ public final class Deployment {
     private final DeploymentId id;
     private final ProjectId projectId;
     private final String environment;
+    private final String provider;
     private final ArtifactId artifactId;
     private final long version;
     private DeploymentStatus status;
@@ -24,6 +25,7 @@ public final class Deployment {
             DeploymentId id,
             ProjectId projectId,
             String environment,
+            String provider,
             ArtifactId artifactId,
             long version,
             DeploymentStatus status,
@@ -36,6 +38,7 @@ public final class Deployment {
         this.id = id;
         this.projectId = projectId;
         this.environment = environment;
+        this.provider = provider;
         this.artifactId = artifactId;
         this.version = version;
         this.status = status;
@@ -46,15 +49,25 @@ public final class Deployment {
         this.finishedAt = finishedAt;
     }
 
-    public static Deployment create(ProjectId projectId, ArtifactId artifactId, String environment, long version) {
+    public static Deployment create(
+            ProjectId projectId,
+            ArtifactId artifactId,
+            String environment,
+            String provider,
+            long version
+    ) {
         if (environment == null || environment.isBlank()) {
             throw new IllegalArgumentException("environment must not be blank");
+        }
+        if (provider == null || provider.isBlank()) {
+            throw new IllegalArgumentException("provider must not be blank");
         }
         Instant now = Instant.now();
         return new Deployment(
                 DeploymentId.newId(),
                 projectId,
                 environment.trim(),
+                provider.trim().toLowerCase(),
                 artifactId,
                 version,
                 DeploymentStatus.CREATED,
@@ -70,6 +83,7 @@ public final class Deployment {
             DeploymentId id,
             ProjectId projectId,
             String environment,
+            String provider,
             ArtifactId artifactId,
             long version,
             DeploymentStatus status,
@@ -83,6 +97,7 @@ public final class Deployment {
                 id,
                 projectId,
                 environment,
+                provider,
                 artifactId,
                 version,
                 status,
@@ -150,6 +165,10 @@ public final class Deployment {
 
     public String environment() {
         return environment;
+    }
+
+    public String provider() {
+        return provider;
     }
 
     public ArtifactId artifactId() {

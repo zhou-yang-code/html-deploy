@@ -13,6 +13,8 @@ const email = args.email ?? process.env.HTML_DEPLOY_EMAIL
 const password = args.password ?? process.env.HTML_DEPLOY_PASSWORD
 const filePath = args.file ? resolve(args.file) : null
 const environment = args.environment ?? 'production'
+const providerAliases = { 'self-hosted': 'local', selfhosted: 'local' }
+const requestedProvider = args.provider ? (providerAliases[args.provider] ?? args.provider) : null
 const tenantSlug = args.tenant
 const projectSlug = args.project
 const projectName = args.name ?? projectSlug
@@ -104,9 +106,15 @@ async function main() {
     fail(`Artifact validation failed: ${artifact.errorCode ?? artifact.status}`)
   }
 
+  const releaseProviders = await api('/api/v1/release-providers').catch(() => null)
+  if (requestedProvider && releaseProviders?.providers && !releaseProviders.providers.includes(requestedProvider)) {
+    fail(`Unsupported --provider "${requestedProvider}". Supported providers: ${releaseProviders.providers.join(', ')}.`)
+  }
+  const provider = requestedProvider ?? releaseProviders?.defaultProvider ?? null
+
   const created = await api(`/api/v1/projects/${project.id}/deployments`, {
     method: 'POST',
-    body: { artifactId: artifact.id, environment },
+    body: { artifactId: artifact.id, environment, ...(provider ? { provider } : {}) },
   })
   const deployment = await poll(
     () => api(`/api/v1/deployments/${created.id}`),
@@ -129,6 +137,7 @@ async function main() {
     deploymentId: deployment.id,
     version: deployment.version,
     status: deployment.status,
+    provider: deployment.provider ?? provider,
     url: deployment.url,
     projectId: project.id,
     tenantId: tenant.id,
@@ -229,6 +238,7 @@ Optional:
   --tenant <slug>        Tenant slug; defaults to the only available tenant
   --name <name>          Project name when creating a project
   --environment <name>   Deployment environment (default: production)
+  --provider <name>      Release provider: netlify or local (default: platform default)
   --register             Register the email and tenant before deploying
   --tenant-name <name>   Tenant name when using --register
   --help, -h             Show this help

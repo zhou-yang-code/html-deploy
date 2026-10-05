@@ -28,7 +28,7 @@ https://html-deploy-api-production.up.railway.app/api/v1
 - ZIP 路径穿越、符号链接、Zip Bomb、危险扩展名和入口文件校验。
 - 不可变 artifact、release 版本和部署历史。
 - Outbox Worker、部署状态机和回滚。
-- 两种内容发布模式：
+- 两种内容发布模式，可按次发布选择（不传则用后端默认值）：
   - `local`：由平台自己的 Spring Boot 内容接口发布，返回 `/sites/{site}/` 地址。
   - `netlify`：调用 Netlify Deploy API，返回 `https://*.netlify.app` 地址。
 - Docker Compose 一键启动 PostgreSQL、MinIO、后端、控制台和 Nginx 内容节点。
@@ -124,13 +124,37 @@ Skill 会依次完成：
 
 ## 内容发布模式
 
-默认发布模式：**Netlify**。自托管模式保留用于验证平台自己的内容发布链路。
+发布模式是**每次发布可选**的参数，不传时使用后端配置的默认值。
 
-通过后端环境变量切换：
+| Provider | 返回地址 | 适用场景 |
+| --- | --- | --- |
+| `netlify` | `https://{site}.netlify.app` | 长期公网分享和 CDN |
+| `local` | `https://api.example.com/sites/{site}/` | 验证平台自己的发布链路 |
+
+控制台在“发布新版本”处提供服务选择；Skill 使用 `--provider netlify|local`。
+读取当前默认值和可选值：
+
+```http
+GET /api/v1/release-providers
+```
+
+创建部署时传入 `provider` 即可覆盖默认值：
+
+```json
+{
+  "artifactId": "uuid",
+  "environment": "production",
+  "provider": "netlify"
+}
+```
+
+Provider 会随部署记录落库，回滚复用原部署的 provider。
+
+后端环境变量只决定**默认** provider：
 
 | 模式 | `RELEASE_PROVIDER` | 返回地址 | 适用场景 |
 | --- | --- | --- | --- |
-| Netlify（默认） | `netlify` | `https://{site}.netlify.app` | 长期公网分享和 CDN |
+| Netlify（当前默认） | `netlify` | `https://{site}.netlify.app` | 长期公网分享和 CDN |
 | 自托管（测试） | `local` | `https://api.example.com/sites/{site}/` | 验证平台自己的发布链路 |
 
 ### 自托管模式

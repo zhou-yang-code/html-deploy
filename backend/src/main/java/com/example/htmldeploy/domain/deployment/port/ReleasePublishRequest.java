@@ -11,6 +11,7 @@ public record ReleasePublishRequest(
         String tenantSlug,
         String projectSlug,
         String environment,
+        String provider,
         Path artifactContentDirectory
 ) {
 }

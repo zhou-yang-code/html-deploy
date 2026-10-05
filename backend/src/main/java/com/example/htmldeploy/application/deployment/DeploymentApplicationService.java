@@ -13,6 +13,7 @@ import com.example.htmldeploy.application.port.DomainEventPublisher;
 import com.example.htmldeploy.application.port.SiteUrlResolver;
 import com.example.htmldeploy.application.project.ProjectApplicationService;
 import com.example.htmldeploy.application.project.ProjectApplicationService.ProjectContext;
+import com.example.htmldeploy.application.deployment.port.ReleaseProviderCatalog;
 import com.example.htmldeploy.domain.artifact.model.Artifact;
 import com.example.htmldeploy.domain.artifact.model.ArtifactId;
 import com.example.htmldeploy.domain.artifact.port.ArtifactContentStore;
@@ -40,6 +41,7 @@ public class DeploymentApplicationService {
     private final ArtifactApplicationService artifacts;
     private final ArtifactContentStore contentStore;
     private final ReleasePublisher releasePublisher;
+    private final ReleaseProviderCatalog releaseProviders;
     private final ProjectApplicationService projects;
     private final SiteUrlResolver siteUrls;
     private final DomainEventPublisher events;
@@ -51,6 +53,7 @@ public class DeploymentApplicationService {
             ArtifactApplicationService artifacts,
             ArtifactContentStore contentStore,
             ReleasePublisher releasePublisher,
+            ReleaseProviderCatalog releaseProviders,
             ProjectApplicationService projects,
             SiteUrlResolver siteUrls,
             DomainEventPublisher events,
@@ -61,6 +64,7 @@ public class DeploymentApplicationService {
         this.artifacts = artifacts;
         this.contentStore = contentStore;
         this.releasePublisher = releasePublisher;
+        this.releaseProviders = releaseProviders;
         this.projects = projects;
         this.siteUrls = siteUrls;
         this.events = events;
@@ -76,7 +80,13 @@ public class DeploymentApplicationService {
                 Role.MAINTAINER
         );
         Artifact artifact = artifacts.requireReady(command.actorId(), command.artifactId(), command.projectId());
-        Deployment deployment = createDeployment(project.project().id(), artifact.id(), command.environment());
+        String provider = requireProvider(command.provider());
+        Deployment deployment = createDeployment(
+                project.project().id(),
+                artifact.id(),
+                command.environment(),
+                provider
+        );
         events.publish(DeploymentRequestedEvent.from(deployment, project.project().tenantId().value()));
         return details(deployment, project);
     }
@@ -111,6 +121,7 @@ public class DeploymentApplicationService {
                     project.tenant().slug(),
                     project.project().slug().value(),
                     deployment.environment(),
+                    deployment.provider(),
                     contentDirectory
             ));
             transactions.executeWithoutResult(status -> {
@@ -160,7 +171,12 @@ public class DeploymentApplicationService {
             throw new DomainException("deployment.rollback_unavailable", "target deployment has no successful release");
         }
         Artifact artifact = artifacts.requireReady(command.actorId(), target.artifactId(), target.projectId());
-        Deployment deployment = createDeployment(target.projectId(), artifact.id(), target.environment());
+        Deployment deployment = createDeployment(
+                target.projectId(),
+                artifact.id(),
+                target.environment(),
+                target.provider()
+        );
         events.publish(DeploymentRequestedEvent.from(deployment, project.project().tenantId().value()));
         return details(deployment, project);
     }
@@ -192,9 +208,25 @@ public class DeploymentApplicationService {
         return details(deployment, project);
     }
 
-    private Deployment createDeployment(ProjectId projectId, ArtifactId artifactId, String environment) {
+    private Deployment createDeployment(
+            ProjectId projectId,
+            ArtifactId artifactId,
+            String environment,
+            String provider
+    ) {
         long version = deployments.nextVersion(projectId);
-        return deployments.save(Deployment.create(projectId, artifactId, environment, version));
+        return deployments.save(Deployment.create(projectId, artifactId, environment, provider, version));
+    }
+
+    private String requireProvider(String requested) {
+        String provider = releaseProviders.normalize(requested);
+        if (!releaseProviders.supports(provider)) {
+            throw new DomainException(
+                    "deployment.provider_unsupported",
+                    "unsupported release provider: " + requested
+            );
+        }
+        return provider;
     }
 
     private Deployment findDeployment(DeploymentId deploymentId) {
@@ -211,6 +243,7 @@ public class DeploymentApplicationService {
                 deployment.projectId().value(),
                 deployment.artifactId().value(),
                 deployment.environment(),
+                deployment.provider(),
                 deployment.version(),
                 deployment.status(),
                 deployment.releasePath(),
@@ -226,7 +259,8 @@ public class DeploymentApplicationService {
             UserId actorId,
             ProjectId projectId,
             ArtifactId artifactId,
-            String environment
+            String environment,
+            String provider
     ) {
     }
 
@@ -238,6 +272,7 @@ public class DeploymentApplicationService {
             java.util.UUID projectId,
             java.util.UUID artifactId,
             String environment,
+            String provider,
             long version,
             DeploymentStatus status,
             String releasePath,

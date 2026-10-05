@@ -104,9 +104,33 @@ POST /api/v1/projects/{projectId}/deployments
 ```json
 {
   "artifactId": "uuid",
-  "environment": "production"
+  "environment": "production",
+  "provider": "netlify"
 }
 ```
+
+`provider` is optional. Omit it to use the platform default. Supported values:
+
+```text
+netlify  -> https://{site}.netlify.app
+local    -> {SITE_URL_TEMPLATE} content endpoint
+```
+
+Read the current default and supported list:
+
+```http
+GET /api/v1/release-providers
+```
+
+```json
+{
+  "defaultProvider": "netlify",
+  "providers": ["netlify", "local"]
+}
+```
+
+The resolved provider is stored on the deployment and returned as `provider`.
+An unsupported value fails the request with `deployment.provider_unsupported`.
 
 Inspect:
 
@@ -131,7 +155,8 @@ Poll until `ACTIVE` or `FAILED`.
 POST /api/v1/deployments/{targetDeploymentId}/rollback
 ```
 
-Rollback creates a new deployment based on the target deployment artifact. It does not rewrite history.
+Rollback creates a new deployment based on the target deployment artifact and reuses the
+target deployment's provider. It does not rewrite history.
 
 ## Upload URL Behavior
 
