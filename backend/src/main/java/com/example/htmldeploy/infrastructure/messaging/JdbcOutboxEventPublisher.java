@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import com.example.htmldeploy.application.port.DomainEventPublisher;
 import com.example.htmldeploy.domain.shared.DomainEvent;
+import com.example.htmldeploy.infrastructure.persistence.JdbcTime;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -40,8 +41,8 @@ public class JdbcOutboxEventPublisher implements DomainEventPublisher {
                 .param("tenantId", event.tenantId())
                 .param("projectId", event.projectId())
                 .param("payload", serialize(event))
-                .param("nextAttemptAt", event.occurredAt())
-                .param("createdAt", Instant.now())
+                .param("nextAttemptAt", JdbcTime.toOffsetDateTime(event.occurredAt()))
+                .param("createdAt", JdbcTime.toOffsetDateTime(Instant.now()))
                 .update();
     }
 

@@ -14,6 +14,7 @@ import com.example.htmldeploy.domain.identity.model.UserAccount;
 import com.example.htmldeploy.domain.identity.model.UserId;
 import com.example.htmldeploy.domain.identity.model.UserStatus;
 import com.example.htmldeploy.domain.identity.repository.UserAccountRepository;
+import com.example.htmldeploy.infrastructure.persistence.JdbcTime;
 
 @Repository
 public class JdbcUserAccountRepository implements UserAccountRepository {
@@ -47,7 +48,7 @@ public class JdbcUserAccountRepository implements UserAccountRepository {
                     .param("email", user.email().value())
                     .param("passwordHash", user.passwordHash())
                     .param("status", user.status().name())
-                    .param("createdAt", user.createdAt())
+                    .param("createdAt", JdbcTime.toOffsetDateTime(user.createdAt()))
                     .update();
         }
         return user;

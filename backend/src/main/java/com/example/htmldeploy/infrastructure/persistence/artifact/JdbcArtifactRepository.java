@@ -16,6 +16,7 @@ import com.example.htmldeploy.domain.artifact.model.Sha256;
 import com.example.htmldeploy.domain.artifact.repository.ArtifactRepository;
 import com.example.htmldeploy.domain.project.model.ProjectId;
 import com.example.htmldeploy.infrastructure.persistence.identity.JdbcUserAccountRepository;
+import com.example.htmldeploy.infrastructure.persistence.JdbcTime;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -49,7 +50,7 @@ public class JdbcArtifactRepository implements ArtifactRepository {
                 .param("sha256", artifact.sha256() == null ? null : artifact.sha256().value())
                 .param("manifestJson", manifestJson)
                 .param("errorCode", artifact.errorCode())
-                .param("updatedAt", artifact.updatedAt())
+                .param("updatedAt", JdbcTime.toOffsetDateTime(artifact.updatedAt()))
                 .update();
         if (updated == 0) {
             jdbc.sql("""
@@ -71,8 +72,8 @@ public class JdbcArtifactRepository implements ArtifactRepository {
                     .param("sha256", artifact.sha256() == null ? null : artifact.sha256().value())
                     .param("manifestJson", manifestJson)
                     .param("errorCode", artifact.errorCode())
-                    .param("createdAt", artifact.createdAt())
-                    .param("updatedAt", artifact.updatedAt())
+                    .param("createdAt", JdbcTime.toOffsetDateTime(artifact.createdAt()))
+                    .param("updatedAt", JdbcTime.toOffsetDateTime(artifact.updatedAt()))
                     .update();
         }
         return artifact;

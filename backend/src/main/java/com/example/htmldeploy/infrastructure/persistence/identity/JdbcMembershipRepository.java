@@ -15,6 +15,7 @@ import com.example.htmldeploy.domain.identity.model.TenantId;
 import com.example.htmldeploy.domain.identity.model.TenantMember;
 import com.example.htmldeploy.domain.identity.model.UserId;
 import com.example.htmldeploy.domain.identity.repository.MembershipRepository;
+import com.example.htmldeploy.infrastructure.persistence.JdbcTime;
 
 @Repository
 public class JdbcMembershipRepository implements MembershipRepository {
@@ -45,7 +46,7 @@ public class JdbcMembershipRepository implements MembershipRepository {
                     .param("tenantId", member.tenantId().value())
                     .param("userId", member.userId().value())
                     .param("role", member.role().name())
-                    .param("createdAt", member.createdAt())
+                    .param("createdAt", JdbcTime.toOffsetDateTime(member.createdAt()))
                     .update();
         }
         return member;
