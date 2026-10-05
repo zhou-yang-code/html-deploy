@@ -4,6 +4,10 @@ import { readFile, stat } from 'node:fs/promises'
 import { basename, resolve } from 'node:path'
 
 const args = parseArgs(process.argv.slice(2))
+if (args.help) {
+  printHelp()
+  process.exit(0)
+}
 const apiBase = (args.api ?? process.env.HTML_DEPLOY_API_URL ?? 'https://html-deploy-api-production.up.railway.app').replace(/\/+$/, '')
 const email = args.email ?? process.env.HTML_DEPLOY_EMAIL
 const password = args.password ?? process.env.HTML_DEPLOY_PASSWORD
@@ -93,8 +97,8 @@ async function main() {
   const artifact = await poll(
     () => api(`/api/v1/artifacts/${upload.artifactId}`),
     (value) => value.status === 'READY' || value.status === 'REJECTED',
-    30,
-    800,
+    90,
+    1000,
   )
   if (artifact.status !== 'READY') {
     fail(`Artifact validation failed: ${artifact.errorCode ?? artifact.status}`)
@@ -107,9 +111,19 @@ async function main() {
   const deployment = await poll(
     () => api(`/api/v1/deployments/${created.id}`),
     (value) => ['ACTIVE', 'FAILED'].includes(value.status),
-    45,
-    900,
+    180,
+    1000,
   )
+
+  let urlStatus = null
+  if (deployment.status === 'ACTIVE' && deployment.url) {
+    try {
+      const response = await fetch(deployment.url, { method: 'HEAD' })
+      urlStatus = response.status
+    } catch {
+      urlStatus = null
+    }
+  }
 
   const result = {
     deploymentId: deployment.id,
@@ -120,6 +134,7 @@ async function main() {
     tenantId: tenant.id,
     artifactId: artifact.id,
     errorCode: deployment.errorCode ?? null,
+    urlStatus,
   }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
   if (deployment.status !== 'ACTIVE') {
@@ -175,6 +190,10 @@ function parseArgs(values) {
   const parsed = {}
   for (let index = 0; index < values.length; index += 1) {
     const value = values[index]
+    if (value === '--help' || value === '-h') {
+      parsed.help = true
+      continue
+    }
     if (!value.startsWith('--')) {
       continue
     }
@@ -191,6 +210,34 @@ function parseArgs(values) {
     index += 1
   }
   return parsed
+}
+
+function printHelp() {
+  process.stdout.write(`HTML Deploy
+
+Usage:
+  node scripts/deploy.mjs --file <dist.zip> --project <slug> [options]
+
+Required:
+  --file <path>          ZIP file containing index.html at its root
+  --project <slug>       Project slug
+  HTML_DEPLOY_EMAIL      Platform login email
+  HTML_DEPLOY_PASSWORD   Platform login password
+
+Optional:
+  --api <url>            API base URL
+  --tenant <slug>        Tenant slug; defaults to the only available tenant
+  --name <name>          Project name when creating a project
+  --environment <name>   Deployment environment (default: production)
+  --register             Register the email and tenant before deploying
+  --tenant-name <name>   Tenant name when using --register
+  --help, -h             Show this help
+
+Environment:
+  HTML_DEPLOY_API_URL
+  HTML_DEPLOY_EMAIL
+  HTML_DEPLOY_PASSWORD
+`)
 }
 
 function fail(message) {
