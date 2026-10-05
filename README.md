@@ -25,9 +25,10 @@ https://html-deploy-api-production.up.railway.app/api/v1
 - 租户、成员和基础 RBAC。
 - 项目创建和项目级发布地址。
 - ZIP 预签名上传，支持本地签名 URL 和 S3/MinIO。
-- ZIP 路径穿越、符号链接、Zip Bomb、危险扩展名和入口文件校验。
+- ZIP 路径穿越、符号链接、Zip Bomb、危险扩展名和入口文件校验；单个顶层目录会自动剥离，`__MACOSX`/`.DS_Store` 会被忽略，校验失败原因随 artifact 返回。
 - 不可变 artifact、release 版本和部署历史。
 - Outbox Worker、部署状态机和回滚。
+- 项目归档、恢复和彻底删除（删除会清理发布数据、本地 release 与对应 Netlify Site）。
 - 两种内容发布模式，可按次发布选择（不传则用后端默认值）：
   - `local`：由平台自己的 Spring Boot 内容接口发布，返回 `/sites/{site}/` 地址。
   - `netlify`：调用 Netlify Deploy API，返回 `https://*.netlify.app` 地址。

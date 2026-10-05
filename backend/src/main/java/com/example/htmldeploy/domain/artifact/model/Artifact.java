@@ -16,6 +16,7 @@ public final class Artifact {
     private Sha256 sha256;
     private ArtifactManifest manifest;
     private String errorCode;
+    private String errorMessage;
     private final Instant createdAt;
     private Instant updatedAt;
 
@@ -29,6 +30,7 @@ public final class Artifact {
             Sha256 sha256,
             ArtifactManifest manifest,
             String errorCode,
+            String errorMessage,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -41,6 +43,7 @@ public final class Artifact {
         this.sha256 = sha256;
         this.manifest = manifest;
         this.errorCode = errorCode;
+        this.errorMessage = errorMessage;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -54,6 +57,7 @@ public final class Artifact {
                 objectKey,
                 ArtifactStatus.CREATED,
                 0,
+                null,
                 null,
                 null,
                 null,
@@ -72,6 +76,7 @@ public final class Artifact {
             Sha256 sha256,
             ArtifactManifest manifest,
             String errorCode,
+            String errorMessage,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -85,6 +90,7 @@ public final class Artifact {
                 sha256,
                 manifest,
                 errorCode,
+                errorMessage,
                 createdAt,
                 updatedAt
         );
@@ -124,13 +130,22 @@ public final class Artifact {
         this.manifest = manifest;
         this.status = ArtifactStatus.READY;
         this.errorCode = null;
+        this.errorMessage = null;
         this.updatedAt = Instant.now();
     }
 
-    public void reject(String errorCode) {
+    public void reject(String errorCode, String errorMessage) {
         this.status = ArtifactStatus.REJECTED;
         this.errorCode = errorCode;
+        this.errorMessage = truncate(errorMessage);
         this.updatedAt = Instant.now();
+    }
+
+    private static String truncate(String message) {
+        if (message == null) {
+            return null;
+        }
+        return message.length() <= 500 ? message : message.substring(0, 500);
     }
 
     public ArtifactId id() {
@@ -167,6 +182,10 @@ public final class Artifact {
 
     public String errorCode() {
         return errorCode;
+    }
+
+    public String errorMessage() {
+        return errorMessage;
     }
 
     public Instant createdAt() {

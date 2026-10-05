@@ -23,7 +23,8 @@ public final class ArchiveValidationService {
         if (!manifest.files().contains(policy.requiredEntryPoint())) {
             throw new DomainException(
                     "artifact.missing_entrypoint",
-                    "archive must contain " + policy.requiredEntryPoint() + " at its root"
+                    "archive must contain " + policy.requiredEntryPoint() + " at its root; found: "
+                            + summarize(manifest.files())
             );
         }
         List<String> blocked = manifest.files().stream()
@@ -38,5 +39,13 @@ public final class ArchiveValidationService {
     private boolean hasBlockedExtension(String path) {
         String lower = path.toLowerCase(Locale.ROOT);
         return BLOCKED_EXTENSIONS.stream().anyMatch(lower::endsWith);
+    }
+
+    private String summarize(List<String> files) {
+        if (files.isEmpty()) {
+            return "(empty archive)";
+        }
+        List<String> sample = files.stream().limit(5).toList();
+        return sample + (files.size() > sample.size() ? ", ..." : "");
     }
 }

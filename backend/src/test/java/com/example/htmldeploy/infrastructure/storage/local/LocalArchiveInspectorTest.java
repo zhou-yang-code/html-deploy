@@ -53,6 +53,47 @@ class LocalArchiveInspectorTest {
                 .hasMessageContaining("escapes destination");
     }
 
+    @Test
+    void unwrapsSingleWrapperDirectory() throws IOException {
+        Path zip = createZip(
+                "wrapped.zip",
+                "dist/index.html", "<h1>Wrapped</h1>",
+                "dist/assets/app.js", "console.log('ok')"
+        );
+
+        var inspection = inspector.inspectAndExtract(zip, tempDirectory.resolve("wrapped"), policy);
+
+        assertThat(inspection.manifest().files()).containsExactly("assets/app.js", "index.html");
+        assertThat(Files.readString(tempDirectory.resolve("wrapped/index.html"))).contains("Wrapped");
+    }
+
+    @Test
+    void ignoresMacOsMetadataEntries() throws IOException {
+        Path zip = createZip(
+                "macos.zip",
+                "index.html", "<h1>Hello</h1>",
+                "__MACOSX/._index.html", "metadata",
+                ".DS_Store", "metadata"
+        );
+
+        var inspection = inspector.inspectAndExtract(zip, tempDirectory.resolve("macos"), policy);
+
+        assertThat(inspection.manifest().files()).containsExactly("index.html");
+    }
+
+    @Test
+    void keepsLayoutWhenNoEntryPointExists() throws IOException {
+        Path zip = createZip(
+                "ambiguous.zip",
+                "a/home.html", "a",
+                "b/index.html", "b"
+        );
+
+        var inspection = inspector.inspectAndExtract(zip, tempDirectory.resolve("ambiguous"), policy);
+
+        assertThat(inspection.manifest().files()).containsExactly("a/home.html", "b/index.html");
+    }
+
     private Path createZip(String filename, String... entries) throws IOException {
         Path zip = tempDirectory.resolve(filename);
         try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(zip))) {

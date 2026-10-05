@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -24,6 +25,9 @@ import com.example.htmldeploy.domain.shared.DomainException;
 @Component
 public class LocalArchiveInspector implements ArchiveInspector {
 
+    private static final String MACOS_METADATA_DIRECTORY = "__MACOSX/";
+    private static final String DS_STORE = ".DS_Store";
+
     @Override
     public ArchiveInspection inspectAndExtract(Path zipFile, Path destination, ArchivePolicy policy) {
         try {
@@ -32,48 +36,11 @@ public class LocalArchiveInspector implements ArchiveInspector {
             if (Files.size(zipFile) > policy.maxZipBytes()) {
                 throw new DomainException("artifact.too_large", "ZIP file exceeds configured limit");
             }
-            List<String> files = new ArrayList<>();
-            Set<String> normalizedNames = new HashSet<>();
-            long totalBytes = 0;
             try (ZipFile archive = ZipFile.builder().setPath(zipFile).get()) {
-                Enumeration<ZipArchiveEntry> entries = archive.getEntries();
-                while (entries.hasMoreElements()) {
-                    ZipArchiveEntry entry = entries.nextElement();
-                    if (entry.isDirectory()) {
-                        continue;
-                    }
-                    if (entry.isUnixSymlink()) {
-                        throw new DomainException("artifact.symlink", "symbolic links are not allowed");
-                    }
-                    String name = normalizeEntryName(entry.getName());
-                    if (name.isBlank() || name.length() > policy.maxPathLength()) {
-                        throw new DomainException("artifact.invalid_path", "archive contains an invalid path");
-                    }
-                    String collisionKey = name.toLowerCase(Locale.ROOT);
-                    if (!normalizedNames.add(collisionKey)) {
-                        throw new DomainException("artifact.duplicate_path", "archive contains duplicate paths");
-                    }
-                    Path target = destination.resolve(name).normalize();
-                    if (!target.startsWith(destination)) {
-                        throw new DomainException("artifact.path_traversal", "archive entry escapes destination");
-                    }
-                    Files.createDirectories(target.getParent());
-                    try (InputStream input = archive.getInputStream(entry)) {
-                        totalBytes = copyWithLimit(input, target, totalBytes, policy.maxExpandedBytes());
-                    }
-                    files.add(name);
-                    if (files.size() > policy.maxFiles()) {
-                        throw new DomainException("artifact.too_many_files", "archive contains too many files");
-                    }
-                }
+                List<Entry> entries = readEntries(archive, policy);
+                String stripPrefix = detectWrapperDirectory(entries, policy.requiredEntryPoint());
+                return extract(archive, entries, destination, stripPrefix, policy);
             }
-            files.sort(String::compareTo);
-            return new ArchiveInspection(new ArtifactManifest(
-                    files.size(),
-                    totalBytes,
-                    policy.requiredEntryPoint(),
-                    files
-            ));
         } catch (DomainException exception) {
             cleanupAfterFailure(destination);
             throw exception;
@@ -81,6 +48,97 @@ public class LocalArchiveInspector implements ArchiveInspector {
             cleanupAfterFailure(destination);
             throw new DomainException("artifact.invalid_archive", "failed to read ZIP archive");
         }
+    }
+
+    private List<Entry> readEntries(ZipFile archive, ArchivePolicy policy) {
+        List<Entry> entries = new ArrayList<>();
+        Set<String> normalizedNames = new HashSet<>();
+        Enumeration<ZipArchiveEntry> rawEntries = archive.getEntries();
+        while (rawEntries.hasMoreElements()) {
+            ZipArchiveEntry entry = rawEntries.nextElement();
+            if (entry.isDirectory()) {
+                continue;
+            }
+            if (entry.isUnixSymlink()) {
+                throw new DomainException("artifact.symlink", "symbolic links are not allowed");
+            }
+            String name = normalizeEntryName(entry.getName());
+            if (isArchiveMetadata(name)) {
+                continue;
+            }
+            if (name.isBlank() || name.length() > policy.maxPathLength()) {
+                throw new DomainException("artifact.invalid_path", "archive contains an invalid path");
+            }
+            if (!normalizedNames.add(name.toLowerCase(Locale.ROOT))) {
+                throw new DomainException("artifact.duplicate_path", "archive contains duplicate paths");
+            }
+            entries.add(new Entry(entry, name));
+        }
+        return entries;
+    }
+
+    private ArchiveInspection extract(
+            ZipFile archive,
+            List<Entry> entries,
+            Path destination,
+            String stripPrefix,
+            ArchivePolicy policy
+    ) throws IOException {
+        List<String> files = new ArrayList<>();
+        long totalBytes = 0;
+        for (Entry entry : entries) {
+            String name = stripPrefix.isEmpty() ? entry.name() : entry.name().substring(stripPrefix.length());
+            if (name.isBlank()) {
+                continue;
+            }
+            Path target = destination.resolve(name).normalize();
+            if (!target.startsWith(destination)) {
+                throw new DomainException("artifact.path_traversal", "archive entry escapes destination");
+            }
+            Files.createDirectories(target.getParent());
+            try (InputStream input = archive.getInputStream(entry.entry())) {
+                totalBytes = copyWithLimit(input, target, totalBytes, policy.maxExpandedBytes());
+            }
+            files.add(name);
+            if (files.size() > policy.maxFiles()) {
+                throw new DomainException("artifact.too_many_files", "archive contains too many files");
+            }
+        }
+        files.sort(String::compareTo);
+        return new ArchiveInspection(new ArtifactManifest(
+                files.size(),
+                totalBytes,
+                policy.requiredEntryPoint(),
+                files
+        ));
+    }
+
+    /**
+     * Users commonly zip the folder that contains index.html instead of its contents.
+     * When every entry lives under one directory and that directory holds the entry point,
+     * drop the wrapper so the archive behaves like a normal site bundle.
+     */
+    private String detectWrapperDirectory(List<Entry> entries, String entryPoint) {
+        Set<String> names = new LinkedHashSet<>();
+        for (Entry entry : entries) {
+            names.add(entry.name());
+        }
+        if (names.contains(entryPoint)) {
+            return "";
+        }
+        Set<String> roots = new LinkedHashSet<>();
+        for (String name : names) {
+            int slash = name.indexOf('/');
+            roots.add(slash < 0 ? "" : name.substring(0, slash));
+        }
+        if (roots.size() != 1) {
+            return "";
+        }
+        String root = roots.iterator().next();
+        if (root.isEmpty()) {
+            return "";
+        }
+        return names.contains(root + "/" + entryPoint) ? root + "/" : "";
     }
 
     private long copyWithLimit(InputStream input, Path target, long currentTotal, long maxBytes) throws IOException {
@@ -110,11 +168,23 @@ public class LocalArchiveInspector implements ArchiveInspector {
         return normalized;
     }
 
+    private boolean isArchiveMetadata(String name) {
+        if (name.startsWith(MACOS_METADATA_DIRECTORY)) {
+            return true;
+        }
+        int slash = name.lastIndexOf('/');
+        String fileName = slash < 0 ? name : name.substring(slash + 1);
+        return DS_STORE.equals(fileName) || fileName.startsWith("._");
+    }
+
     private void cleanupAfterFailure(Path destination) {
         try {
             LocalPaths.deleteRecursively(destination);
         } catch (IOException ignored) {
             // The original error is more useful than cleanup failure.
         }
+    }
+
+    private record Entry(ZipArchiveEntry entry, String name) {
     }
 }

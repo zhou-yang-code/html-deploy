@@ -157,7 +157,7 @@ public class ArtifactApplicationService {
             String errorCode = exception instanceof DomainException domainException
                     ? domainException.code()
                     : "artifact.validation_failed";
-            artifact.reject(errorCode);
+            artifact.reject(errorCode, exception.getMessage());
             artifacts.save(artifact);
             events.publish(ArtifactRejectedEvent.from(artifact, project.project().tenantId().value()));
         } finally {
@@ -214,6 +214,7 @@ public class ArtifactApplicationService {
                 artifact.manifest() == null ? null : artifact.manifest().fileCount(),
                 artifact.manifest() == null ? null : artifact.manifest().totalBytes(),
                 artifact.errorCode(),
+                artifact.errorMessage(),
                 artifact.createdAt(),
                 artifact.updatedAt()
         );
@@ -274,6 +275,7 @@ public class ArtifactApplicationService {
             Integer fileCount,
             Long totalBytes,
             String errorCode,
+            String errorMessage,
             Instant createdAt,
             Instant updatedAt
     ) {

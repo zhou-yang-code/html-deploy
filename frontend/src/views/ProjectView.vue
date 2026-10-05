@@ -74,6 +74,19 @@ async function archiveProject() {
   }
 }
 
+async function restoreProject() {
+  if (!project.value) {
+    return
+  }
+  error.value = ''
+  try {
+    project.value = await api.restoreProject(projectId.value)
+    await loadDeployments()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : '项目恢复失败'
+  }
+}
+
 async function deleteProject() {
   if (!project.value) {
     return
@@ -138,7 +151,10 @@ async function waitForArtifact(artifactId: string) {
       return artifact
     }
     if (artifact.status === 'REJECTED') {
-      throw new Error(artifact.errorCode ? `产物校验失败：${artifact.errorCode}` : '产物校验失败')
+      const detail = artifact.errorMessage
+        ? `${artifact.errorCode}：${artifact.errorMessage}`
+        : artifact.errorCode
+      throw new Error(detail ? `产物校验失败：${detail}` : '产物校验失败')
     }
     await sleep(800)
   }
@@ -232,7 +248,16 @@ onBeforeUnmount(() => {
         </p>
       </div>
       <div class="header-actions">
-        <button class="icon-button" type="button" title="归档项目" @click="archiveProject">
+        <button
+          v-if="project?.status === 'ARCHIVED'"
+          class="icon-button"
+          type="button"
+          title="恢复项目"
+          @click="restoreProject"
+        >
+          <RotateCcw :size="17" />
+        </button>
+        <button v-else class="icon-button" type="button" title="归档项目" @click="archiveProject">
           <Archive :size="17" />
         </button>
         <button class="icon-button icon-button--danger" type="button" title="删除项目" @click="deleteProject">

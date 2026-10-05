@@ -102,8 +102,9 @@ export const api = {
     return request<TenantSummary[]>('/api/v1/tenants')
   },
 
-  projects(tenantId: string) {
-    return request<ProjectSummary[]>(`/api/v1/tenants/${tenantId}/projects`)
+  projects(tenantId: string, includeArchived = false) {
+    const query = includeArchived ? '?includeArchived=true' : ''
+    return request<ProjectSummary[]>(`/api/v1/tenants/${tenantId}/projects${query}`)
   },
 
   createProject(tenantId: string, payload: { name: string; slug?: string }) {
@@ -119,6 +120,12 @@ export const api = {
 
   archiveProject(projectId: string) {
     return request<ProjectSummary>(`/api/v1/projects/${projectId}/archive`, {
+      method: 'POST',
+    })
+  },
+
+  restoreProject(projectId: string) {
+    return request<ProjectSummary>(`/api/v1/projects/${projectId}/restore`, {
       method: 'POST',
     })
   },

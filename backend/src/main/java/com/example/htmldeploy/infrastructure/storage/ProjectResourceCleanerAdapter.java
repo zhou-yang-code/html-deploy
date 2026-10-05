@@ -5,6 +5,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.UUID;
 
@@ -86,7 +88,7 @@ public class ProjectResourceCleanerAdapter implements ProjectResourceCleaner {
         );
         try {
             HttpRequest listRequest = HttpRequest.newBuilder()
-                    .uri(uri("/sites?per_page=100"))
+                    .uri(uri("/sites?name=" + URLEncoder.encode(siteName, StandardCharsets.UTF_8)))
                     .header("Authorization", "Bearer " + netlifyProperties.authToken())
                     .GET()
                     .build();

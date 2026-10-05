@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { ExternalLink, FolderPlus, RefreshCw, Rocket } from 'lucide-vue-next'
+import {
+  Archive,
+  ArchiveRestore,
+  ExternalLink,
+  FolderPlus,
+  RefreshCw,
+  Rocket,
+  Trash2,
+} from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -12,6 +20,8 @@ const selectedTenantId = ref('')
 const projects = ref<ProjectSummary[]>([])
 const loading = ref(false)
 const creating = ref(false)
+const showArchived = ref(false)
+const busyProjectId = ref('')
 const error = ref('')
 const form = reactive({
   name: '',
@@ -20,6 +30,7 @@ const form = reactive({
 
 const selectedTenant = computed(() => tenants.value.find((tenant) => tenant.id === selectedTenantId.value))
 const canCreate = computed(() => ['OWNER', 'MAINTAINER'].includes(selectedTenant.value?.role ?? ''))
+const canManage = computed(() => selectedTenant.value?.role === 'OWNER')
 
 async function loadProjects() {
   if (!selectedTenantId.value) {
@@ -29,7 +40,7 @@ async function loadProjects() {
   loading.value = true
   error.value = ''
   try {
-    projects.value = await api.projects(selectedTenantId.value)
+    projects.value = await api.projects(selectedTenantId.value, showArchived.value)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '项目加载失败'
   } finally {
@@ -72,7 +83,56 @@ async function createProject() {
   }
 }
 
+async function archiveProject(project: ProjectSummary) {
+  if (!window.confirm(`确认归档“${project.name}”？归档后项目会从默认列表隐藏，数据仍保留。`)) {
+    return
+  }
+  busyProjectId.value = project.id
+  error.value = ''
+  try {
+    await api.archiveProject(project.id)
+    await loadProjects()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : '项目归档失败'
+  } finally {
+    busyProjectId.value = ''
+  }
+}
+
+async function restoreProject(project: ProjectSummary) {
+  busyProjectId.value = project.id
+  error.value = ''
+  try {
+    await api.restoreProject(project.id)
+    await loadProjects()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : '项目恢复失败'
+  } finally {
+    busyProjectId.value = ''
+  }
+}
+
+async function deleteProject(project: ProjectSummary) {
+  const confirmation = window.prompt(
+    `此操作会删除项目、部署历史和对应的 Netlify Site，且不可恢复。\n请输入项目标识 ${project.slug} 确认：`,
+  )
+  if (confirmation !== project.slug) {
+    return
+  }
+  busyProjectId.value = project.id
+  error.value = ''
+  try {
+    await api.deleteProject(project.id)
+    await loadProjects()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : '项目删除失败'
+  } finally {
+    busyProjectId.value = ''
+  }
+}
+
 watch(selectedTenantId, loadProjects)
+watch(showArchived, loadProjects)
 onMounted(load)
 </script>
 
@@ -130,7 +190,13 @@ onMounted(load)
     <section class="panel projects-panel">
       <div class="panel-header">
         <h2>项目列表</h2>
-        <span class="muted">{{ projects.length }} 个项目</span>
+        <div class="panel-actions">
+          <label class="archived-toggle">
+            <input v-model="showArchived" type="checkbox">
+            显示已归档
+          </label>
+          <span class="muted">{{ projects.length }} 个项目</span>
+        </div>
       </div>
 
       <div v-if="loading" class="empty-state">正在加载项目...</div>
@@ -151,9 +217,32 @@ onMounted(load)
             {{ project.deploymentUrl }}
             <ExternalLink :size="14" />
           </a>
-          <button class="button project-open" type="button" @click="router.push(`/projects/${project.id}`)">
-            打开发布面板
-          </button>
+          <div class="project-card__actions">
+            <button class="button project-open" type="button" @click="router.push(`/projects/${project.id}`)">
+              打开发布面板
+            </button>
+            <template v-if="canManage">
+              <button
+                class="icon-button"
+                type="button"
+                :title="project.status === 'ARCHIVED' ? '恢复项目' : '归档项目'"
+                :disabled="busyProjectId === project.id"
+                @click="project.status === 'ARCHIVED' ? restoreProject(project) : archiveProject(project)"
+              >
+                <ArchiveRestore v-if="project.status === 'ARCHIVED'" :size="16" />
+                <Archive v-else :size="16" />
+              </button>
+              <button
+                class="icon-button icon-button--danger"
+                type="button"
+                title="删除项目"
+                :disabled="busyProjectId === project.id"
+                @click="deleteProject(project)"
+              >
+                <Trash2 :size="16" />
+              </button>
+            </template>
+          </div>
         </article>
       </div>
     </section>
@@ -187,6 +276,20 @@ onMounted(load)
 
 .create-panel {
   margin-bottom: 20px;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.archived-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #5d6976;
+  font-size: 13px;
 }
 
 .project-grid {
@@ -246,6 +349,12 @@ onMounted(load)
 }
 
 .project-open {
-  width: 100%;
+  flex: 1;
+}
+
+.project-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

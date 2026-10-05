@@ -41,6 +41,7 @@ public class JdbcArtifactRepository implements ArtifactRepository {
                                sha256 = :sha256,
                                manifest_json = :manifestJson,
                                error_code = :errorCode,
+                               error_message = :errorMessage,
                                updated_at = :updatedAt
                          where id = :id
                         """)
@@ -50,17 +51,20 @@ public class JdbcArtifactRepository implements ArtifactRepository {
                 .param("sha256", artifact.sha256() == null ? null : artifact.sha256().value())
                 .param("manifestJson", manifestJson)
                 .param("errorCode", artifact.errorCode())
+                .param("errorMessage", artifact.errorMessage())
                 .param("updatedAt", JdbcTime.toOffsetDateTime(artifact.updatedAt()))
                 .update();
         if (updated == 0) {
             jdbc.sql("""
                             insert into artifact (
                                 id, project_id, original_filename, object_key, status,
-                                size_bytes, sha256, manifest_json, error_code, created_at, updated_at
+                                size_bytes, sha256, manifest_json, error_code, error_message,
+                                created_at, updated_at
                             )
                             values (
                                 :id, :projectId, :originalFilename, :objectKey, :status,
-                                :sizeBytes, :sha256, :manifestJson, :errorCode, :createdAt, :updatedAt
+                                :sizeBytes, :sha256, :manifestJson, :errorCode, :errorMessage,
+                                :createdAt, :updatedAt
                             )
                             """)
                     .param("id", artifact.id().value())
@@ -72,6 +76,7 @@ public class JdbcArtifactRepository implements ArtifactRepository {
                     .param("sha256", artifact.sha256() == null ? null : artifact.sha256().value())
                     .param("manifestJson", manifestJson)
                     .param("errorCode", artifact.errorCode())
+                    .param("errorMessage", artifact.errorMessage())
                     .param("createdAt", JdbcTime.toOffsetDateTime(artifact.createdAt()))
                     .param("updatedAt", JdbcTime.toOffsetDateTime(artifact.updatedAt()))
                     .update();
@@ -83,7 +88,8 @@ public class JdbcArtifactRepository implements ArtifactRepository {
     public Optional<Artifact> findById(ArtifactId id) {
         return jdbc.sql("""
                         select id, project_id, original_filename, object_key, status,
-                               size_bytes, sha256, manifest_json, error_code, created_at, updated_at
+                               size_bytes, sha256, manifest_json, error_code, error_message,
+                               created_at, updated_at
                           from artifact
                          where id = :id
                         """)
@@ -96,7 +102,8 @@ public class JdbcArtifactRepository implements ArtifactRepository {
     public Optional<Artifact> findByProjectIdAndSha256(ProjectId projectId, Sha256 sha256) {
         return jdbc.sql("""
                         select id, project_id, original_filename, object_key, status,
-                               size_bytes, sha256, manifest_json, error_code, created_at, updated_at
+                               size_bytes, sha256, manifest_json, error_code, error_message,
+                               created_at, updated_at
                           from artifact
                          where project_id = :projectId
                            and sha256 = :sha256
@@ -120,6 +127,7 @@ public class JdbcArtifactRepository implements ArtifactRepository {
                 sha == null ? null : new Sha256(sha),
                 readManifest(manifestJson),
                 rs.getString("error_code"),
+                rs.getString("error_message"),
                 rs.getObject("created_at", OffsetDateTime.class).toInstant(),
                 rs.getObject("updated_at", OffsetDateTime.class).toInstant()
         );

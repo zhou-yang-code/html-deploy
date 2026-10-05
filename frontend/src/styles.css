@@ -173,6 +173,15 @@ a {
   color: #465362;
 }
 
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.icon-button--danger {
+  color: #9f2f2f;
+}
+
 .field {
   display: grid;
   gap: 7px;

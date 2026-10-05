@@ -33,7 +33,15 @@ POST /api/v1/tenants/{tenantId}/members
 GET  /api/v1/tenants/{tenantId}/projects
 POST /api/v1/tenants/{tenantId}/projects
 GET  /api/v1/projects/{projectId}
+POST /api/v1/projects/{projectId}/archive
+POST /api/v1/projects/{projectId}/restore
+DELETE /api/v1/projects/{projectId}
 ```
+
+`GET /api/v1/tenants/{tenantId}/projects` returns active projects by default.
+Pass `?includeArchived=true` to include archived ones. Archive, restore, and
+delete require the `OWNER` role; delete removes platform data and any matching
+Netlify Site.
 
 Create project:
 
@@ -92,6 +100,11 @@ CREATED -> UPLOADED -> VALIDATING -> READY
 ```
 
 Do not create a deployment until the artifact is `READY`.
+
+On failure the artifact response carries `errorCode` plus a human-readable
+`errorMessage` (for example the paths found when `index.html` is missing).
+`index.html` must be at the ZIP root; when every entry sits inside one
+top-level folder, the platform drops that wrapper automatically.
 
 ## Deployment
 

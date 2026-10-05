@@ -29,7 +29,8 @@ class ArchiveValidationServiceTest {
                 policy
         ))
                 .isInstanceOf(DomainException.class)
-                .hasMessageContaining("index.html");
+                .hasMessageContaining("index.html")
+                .hasMessageContaining("home.html");
     }
 
     @Test

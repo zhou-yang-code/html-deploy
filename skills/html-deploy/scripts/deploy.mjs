@@ -103,7 +103,8 @@ async function main() {
     1000,
   )
   if (artifact.status !== 'READY') {
-    fail(`Artifact validation failed: ${artifact.errorCode ?? artifact.status}`)
+    const detail = artifact.errorMessage ? ` - ${artifact.errorMessage}` : ''
+    fail(`Artifact validation failed: ${artifact.errorCode ?? artifact.status}${detail}`)
   }
 
   const releaseProviders = await api('/api/v1/release-providers').catch(() => null)

@@ -10,6 +10,7 @@ import com.example.htmldeploy.application.identity.IdentityApplicationService;
 import com.example.htmldeploy.application.identity.IdentityApplicationService.TenantSummary;
 import com.example.htmldeploy.application.port.SiteUrlResolver;
 import com.example.htmldeploy.application.project.port.ProjectDeletionPort;
+import com.example.htmldeploy.application.project.port.ProjectReleaseUrlPort;
 import com.example.htmldeploy.application.project.port.ProjectResourceCleaner;
 import com.example.htmldeploy.application.shared.SlugGenerator;
 import com.example.htmldeploy.domain.identity.model.Role;
@@ -30,19 +31,22 @@ public class ProjectApplicationService {
     private final SiteUrlResolver siteUrls;
     private final ProjectDeletionPort projectDeletion;
     private final ProjectResourceCleaner resourceCleaner;
+    private final ProjectReleaseUrlPort releaseUrls;
 
     public ProjectApplicationService(
             ProjectRepository projects,
             IdentityApplicationService identity,
             SiteUrlResolver siteUrls,
             ProjectDeletionPort projectDeletion,
-            ProjectResourceCleaner resourceCleaner
+            ProjectResourceCleaner resourceCleaner,
+            ProjectReleaseUrlPort releaseUrls
     ) {
         this.projects = projects;
         this.identity = identity;
         this.siteUrls = siteUrls;
         this.projectDeletion = projectDeletion;
         this.resourceCleaner = resourceCleaner;
+        this.releaseUrls = releaseUrls;
     }
 
     @Transactional
@@ -60,10 +64,10 @@ public class ProjectApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectSummary> list(UserId actorId, TenantId tenantId) {
+    public List<ProjectSummary> list(UserId actorId, TenantId tenantId, boolean includeArchived) {
         identity.requireTenantRole(actorId, tenantId, Role.VIEWER, Role.DEVELOPER, Role.MAINTAINER);
         return projects.findByTenantId(tenantId).stream()
-                .filter(project -> project.status() == com.example.htmldeploy.domain.project.model.ProjectStatus.ACTIVE)
+                .filter(project -> includeArchived || project.status() == ProjectStatus.ACTIVE)
                 .map(project -> summary(actorId, project))
                 .toList();
     }
@@ -78,19 +82,23 @@ public class ProjectApplicationService {
 
     @Transactional
     public ProjectSummary archive(UserId actorId, ProjectId projectId) {
-        Project project = projects.findById(projectId)
-                .orElseThrow(() -> new DomainException("project.not_found", "project not found"));
-        identity.requireTenantRole(actorId, project.tenantId(), Role.OWNER);
+        Project project = requireOwner(actorId, projectId);
         project.archive();
         projects.save(project);
         return summary(actorId, project);
     }
 
     @Transactional
+    public ProjectSummary restore(UserId actorId, ProjectId projectId) {
+        Project project = requireOwner(actorId, projectId);
+        project.restore();
+        projects.save(project);
+        return summary(actorId, project);
+    }
+
+    @Transactional
     public void delete(UserId actorId, ProjectId projectId) {
-        Project project = projects.findById(projectId)
-                .orElseThrow(() -> new DomainException("project.not_found", "project not found"));
-        identity.requireTenantRole(actorId, project.tenantId(), Role.OWNER);
+        Project project = requireOwner(actorId, projectId);
         TenantSummary tenant = identity.tenantSummary(actorId, project.tenantId());
         resourceCleaner.deleteExternalResources(
                 tenant.slug(),
@@ -98,6 +106,13 @@ public class ProjectApplicationService {
                 project.id().value()
         );
         projectDeletion.deletePlatformData(projectId);
+    }
+
+    private Project requireOwner(UserId actorId, ProjectId projectId) {
+        Project project = projects.findById(projectId)
+                .orElseThrow(() -> new DomainException("project.not_found", "project not found"));
+        identity.requireTenantRole(actorId, project.tenantId(), Role.OWNER);
+        return project;
     }
 
     @Transactional(readOnly = true)
@@ -126,7 +141,9 @@ public class ProjectApplicationService {
                 project.name(),
                 project.slug().value(),
                 project.status(),
-                siteUrls.resolve(tenant.slug(), project.slug().value()),
+                releaseUrls.activeReleaseUrl(project.id())
+                        .filter(url -> url.startsWith("http"))
+                        .orElseGet(() -> siteUrls.resolve(tenant.slug(), project.slug().value())),
                 project.createdAt(),
                 project.updatedAt()
         );

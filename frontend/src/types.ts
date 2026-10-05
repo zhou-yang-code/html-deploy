@@ -56,6 +56,7 @@ export interface ArtifactDetails {
   fileCount?: number
   totalBytes?: number
   errorCode?: string
+  errorMessage?: string
   createdAt: string
   updatedAt: string
 }

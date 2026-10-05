@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.htmldeploy.application.project.ProjectApplicationService;
@@ -33,8 +34,12 @@ public class ProjectController {
     }
 
     @GetMapping("/api/v1/tenants/{tenantId}/projects")
-    public List<ProjectSummary> list(Authentication authentication, @PathVariable UUID tenantId) {
-        return projects.list(CurrentUser.id(authentication), new TenantId(tenantId));
+    public List<ProjectSummary> list(
+            Authentication authentication,
+            @PathVariable UUID tenantId,
+            @RequestParam(defaultValue = "false") boolean includeArchived
+    ) {
+        return projects.list(CurrentUser.id(authentication), new TenantId(tenantId), includeArchived);
     }
 
     @PostMapping("/api/v1/tenants/{tenantId}/projects")
@@ -59,6 +64,11 @@ public class ProjectController {
     @PostMapping("/api/v1/projects/{projectId}/archive")
     public ProjectSummary archive(Authentication authentication, @PathVariable UUID projectId) {
         return projects.archive(CurrentUser.id(authentication), new ProjectId(projectId));
+    }
+
+    @PostMapping("/api/v1/projects/{projectId}/restore")
+    public ProjectSummary restore(Authentication authentication, @PathVariable UUID projectId) {
+        return projects.restore(CurrentUser.id(authentication), new ProjectId(projectId));
     }
 
     @DeleteMapping("/api/v1/projects/{projectId}")

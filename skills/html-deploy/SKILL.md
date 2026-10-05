@@ -83,7 +83,13 @@ The ZIP is validated by the platform. It must:
 - stay within configured file, expanded-size, and path limits;
 - avoid path traversal, symbolic links, and executable files.
 
-Do not wrap the site in an extra directory unless `index.html` remains at the ZIP root.
+If every entry sits inside a single top-level folder that contains `index.html`
+(for example `dist/index.html`), the platform drops that wrapper automatically.
+macOS metadata such as `__MACOSX/` and `.DS_Store` is ignored. Archives with
+several top-level folders must still place `index.html` at the ZIP root.
+
+When validation fails, read `errorCode` and `errorMessage` from the artifact
+response; `artifact.missing_entrypoint` lists the paths that were found.
 
 ## Direct API Use
 

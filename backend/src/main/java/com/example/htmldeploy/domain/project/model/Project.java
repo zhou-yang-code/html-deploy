@@ -57,6 +57,11 @@ public final class Project {
         this.updatedAt = Instant.now();
     }
 
+    public void restore() {
+        this.status = ProjectStatus.ACTIVE;
+        this.updatedAt = Instant.now();
+    }
+
     public ProjectId id() {
         return id;
     }
