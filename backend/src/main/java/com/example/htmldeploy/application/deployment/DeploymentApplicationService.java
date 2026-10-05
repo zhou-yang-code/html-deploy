@@ -203,6 +203,9 @@ public class DeploymentApplicationService {
     }
 
     private DeploymentDetails details(Deployment deployment, ProjectContext project) {
+        String publicUrl = deployment.releasePath() != null && deployment.releasePath().startsWith("http")
+                ? deployment.releasePath()
+                : siteUrls.resolve(project.tenant().slug(), project.project().slug().value());
         return new DeploymentDetails(
                 deployment.id().value(),
                 deployment.projectId().value(),
@@ -212,7 +215,7 @@ public class DeploymentApplicationService {
                 deployment.status(),
                 deployment.releasePath(),
                 deployment.errorCode(),
-                siteUrls.resolve(project.tenant().slug(), project.project().slug().value()),
+                publicUrl,
                 deployment.createdAt(),
                 deployment.updatedAt(),
                 deployment.finishedAt()
