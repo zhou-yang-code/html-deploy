@@ -1,36 +1,75 @@
 # HTML Deploy Platform
 
-基于 JDK 21、Spring Boot 和 Vue 3 的多租户 HTML 静态部署平台。
+基于 JDK 21、Spring Boot、DDD 和 Vue 3 的多租户 HTML 静态部署平台。
 
-## 已实现能力
+## 线上演示
+
+| 服务 | 地址 |
+| --- | --- |
+| 控制台 | https://html-deploy-console-zhou-yang-code.netlify.app |
+| 后端 API | https://html-deploy-api-production.up.railway.app |
+| 后端健康检查 | https://html-deploy-api-production.up.railway.app/actuator/health |
+| 自托管内容示例 | https://html-deploy-api-production.up.railway.app/sites/zdemo20261005final-huarong-dao/ |
+| Netlify 内容示例 | https://zdemo20261005final-huarong-dao-4384a449.netlify.app/ |
+
+演示项目：[华容道小游戏](games/huarong-dao/index.html)
+
+## 核心能力
 
 - 邮箱注册、登录和 JWT。
 - 租户、成员和基础 RBAC。
-- 项目创建与默认子域名访问地址。
-- ZIP 预签名上传，本地模式使用签名上传 URL，Compose 模式使用 MinIO。
+- 项目创建和项目级发布地址。
+- ZIP 预签名上传，支持本地签名 URL 和 S3/MinIO。
 - ZIP 路径穿越、符号链接、Zip Bomb、危险扩展名和入口文件校验。
-- 不可变 artifact 和 release 版本。
-- 部署状态机、Outbox Worker、部署历史和回滚。
-- 本地文件发布与 Nginx 子域名承载。
-- Docker Compose 一键启动 PostgreSQL、MinIO、后端、控制台和内容节点。
+- 不可变 artifact、release 版本和部署历史。
+- Outbox Worker、部署状态机和回滚。
+- 两种内容发布模式：
+  - `local`：由平台自己的 Spring Boot 内容接口发布，返回 `/sites/{site}/` 地址。
+  - `netlify`：调用 Netlify Deploy API，返回 `https://*.netlify.app` 地址。
+- Docker Compose 一键启动 PostgreSQL、MinIO、后端、控制台和 Nginx 内容节点。
 
-## 下载 Skill 后自动部署
+## 架构
 
-仓库内置 `skills/html-deploy`，安装后可直接让 Codex 完成登录、创建项目、上传 ZIP、等待校验、发布到 Netlify，并返回公开 URL。
+```text
+Vue Console / Deploy Skill
+          |
+          v
+Spring Boot API（Railway）
+          |
+          +-- PostgreSQL
+          |
+          +-- Outbox Worker
+                |
+                +-- local -> /sites/{site}/ 内容接口
+                |
+                +-- netlify -> Netlify Deploy API
+```
 
-### 1. 安装 Skill
+后端包结构固定为：
+
+```text
+interfaces/application/domain/infrastructure
+```
+
+每层内部按 `identity/project/artifact/deployment` 等业务上下文分包。
+
+## 安装部署 Skill
+
+仓库内置 `skills/html-deploy`。安装后可以让 Codex 完成登录、定位租户和项目、上传 ZIP、等待校验、创建部署并返回最终公开 URL。
 
 ```powershell
 npx skills add zhou-yang-code/html-deploy --skill html-deploy --full-depth
 ```
 
-skills CLI 会自动识别当前 agent，或在交互界面中让你选择 agent。需要全局安装时追加 `-g`；需要明确安装到 Codex 时可以使用：
+需要安装到全局 Codex：
 
 ```powershell
 npx skills add zhou-yang-code/html-deploy --skill html-deploy --full-depth -g -a codex --copy
 ```
 
-### 2. 配置平台账号
+## 使用 Skill 发布
+
+### 配置账号
 
 ```powershell
 $env:HTML_DEPLOY_API_URL = "https://html-deploy-api-production.up.railway.app"
@@ -39,7 +78,7 @@ $env:HTML_DEPLOY_PASSWORD = "<your-password>"
 $skillDir = Join-Path $HOME ".codex\skills\html-deploy"
 ```
 
-首次使用且还没有账号时，可先注册：
+首次使用且还没有账号时：
 
 ```powershell
 node "$skillDir\scripts\deploy.mjs" `
@@ -51,7 +90,7 @@ node "$skillDir\scripts\deploy.mjs" `
   --name "Demo Site"
 ```
 
-### 3. 自动发布
+### 自动发布
 
 ```powershell
 node "$skillDir\scripts\deploy.mjs" `
@@ -62,13 +101,15 @@ node "$skillDir\scripts\deploy.mjs" `
   --environment production
 ```
 
-Skill 会自动完成：
+Skill 会依次完成：
 
-1. 登录平台并定位租户和项目。
+1. 登录并解析租户和项目。
 2. 项目不存在时自动创建。
-3. 上传 ZIP，等待 artifact 校验为 `READY`。
-4. 创建 deployment，等待 Netlify 发布完成。
-5. 返回 deployment ID、版本、状态和公开的 `https://*.netlify.app` 地址。
+3. 创建 artifact、上传 ZIP 并完成上传确认。
+4. 等待 artifact 状态变为 `READY`。
+5. 创建 deployment。
+6. 等待当前 Publisher 完成发布。
+7. 返回 deployment ID、版本、状态和公开 URL。
 
 在 Codex 中也可以直接说：
 
@@ -76,24 +117,53 @@ Skill 会自动完成：
 使用 $html-deploy 把 .\dist.zip 部署到 demo-site，并返回公网 URL。
 ```
 
+## 内容发布模式
+
+通过后端环境变量切换：
+
+| 模式 | `RELEASE_PROVIDER` | 返回地址 | 适用场景 |
+| --- | --- | --- | --- |
+| 自托管 | `local` | `https://api.example.com/sites/{site}/` | 验证平台自己的发布链路 |
+| Netlify | `netlify` | `https://{site}.netlify.app` | 长期公网分享和 CDN |
+
+### 自托管模式
+
+后端内容接口：
+
+```text
+GET /sites/{tenantSlug}-{projectSlug}/**
+```
+
+URL 模板：
+
+```text
+SITE_URL_TEMPLATE=https://html-deploy-api-production.up.railway.app/sites/{site}/
+```
+
+当前 Railway 临时部署使用该模式时，release 文件位于容器临时磁盘。服务重建或重启后，历史 release 文件可能丢失，但新发布仍可正常生成。
+
+### Netlify 模式
+
+配置：
+
+```text
+RELEASE_PROVIDER=netlify
+NETLIFY_AUTH_TOKEN=<netlify-personal-access-token>
+```
+
+Worker 会查找或创建 Netlify Site，将校验后的静态文件打包并调用 Netlify Deploy API。Netlify 内容不依赖 Railway 临时磁盘，适合长期分享。
+
 ## 目录
 
 ```text
 backend/                  Spring Boot DDD 分层单体
 frontend/                 Vue 3 控制台
 skills/html-deploy/       自动部署 Skill
-deploy/nginx/            静态站点内容节点
-docker-compose.yml       完整本地环境
-docs/                    技术方案
+games/huarong-dao/         华容道示例页面
+deploy/nginx/             静态站点内容节点
+docker-compose.yml        本地完整环境
+docs/                     技术方案和 Render 部署说明
 ```
-
-后端包结构固定为：
-
-```text
-interfaces/application/domain/infrastructure
-```
-
-每层内部按 `identity/project/artifact/deployment` 等业务上下文分包。
 
 ## 本地开发
 
@@ -116,37 +186,23 @@ npm run dev
 
 访问 `http://localhost:5173`。Vite 会把 `/api` 代理到 `http://localhost:8080`。
 
-本地内容地址格式：
+本地内容地址默认格式：
 
 ```text
 http://{tenantSlug}-{projectSlug}.apps.localhost:8081
 ```
 
-本地模式可启动轻量内容节点，从 `backend/data/www` 读取 release：
+本地内容节点：
 
 ```powershell
 node scripts/local-content-server.mjs
 ```
-
-该脚本按 `.apps.localhost` Host 路由到对应站点的 `current` 目录。生产环境使用 Compose 中的 Nginx 内容节点。
 
 ## Docker Compose
 
 ```powershell
 docker compose up --build
 ```
-
-## 部署到 Render
-
-仓库根目录包含 `render.yaml`，可以直接使用 Render Blueprint 创建 Spring Boot 服务和 PostgreSQL：
-
-```text
-New -> Blueprint -> 选择仓库
-```
-
-完整步骤见 [docs/render-backend-deployment.md](docs/render-backend-deployment.md)。
-
-服务端口：
 
 | 服务 | 地址 |
 | --- | --- |
@@ -156,22 +212,55 @@ New -> Blueprint -> 选择仓库
 | MinIO API | http://localhost:9000 |
 | MinIO Console | http://localhost:9001 |
 
-Compose 会创建以下存储：
+Compose 会创建：
 
 - PostgreSQL 业务数据。
 - MinIO 原始 ZIP 对象。
 - 共享 volume 中的 release 和 Nginx `current` 链接。
+
+## Railway 部署
+
+当前线上后端使用 Railway PostgreSQL 和 Docker Web Service。
+
+关键环境变量：
+
+```text
+SPRING_PROFILES_ACTIVE=postgres
+DATABASE_URL=<railway-postgres-url>
+STORAGE_TYPE=local
+RELEASE_PROVIDER=local
+SITE_URL_TEMPLATE=https://html-deploy-api-production.up.railway.app/sites/{site}/
+PUBLIC_BASE_URL=https://html-deploy-api-production.up.railway.app
+```
+
+切换到 Netlify：
+
+```text
+RELEASE_PROVIDER=netlify
+NETLIFY_AUTH_TOKEN=<token>
+```
+
+## Render 部署
+
+仓库包含 `render.yaml`，可作为 Railway 的替代方案。
+
+```text
+New -> Blueprint -> 选择仓库
+```
+
+完整步骤见 [docs/render-backend-deployment.md](docs/render-backend-deployment.md)。
 
 ## 主链路
 
 1. 注册并创建租户。
 2. 创建项目。
 3. 上传包含根目录 `index.html` 的 ZIP。
-4. 后端 Worker 校验并固化 artifact。
+4. Worker 校验并固化 artifact。
 5. 创建 deployment。
-6. 发布 Worker 生成不可变 release 并切换 active 指针。
-7. 通过项目默认域名访问。
-8. 在部署历史中对成功版本执行回滚。
+6. Publisher 根据 `RELEASE_PROVIDER` 发布到自托管内容接口或 Netlify。
+7. 更新 `ReleaseChannel` active 指针。
+8. 返回公开 URL。
+9. 在部署历史中对成功版本执行回滚。
 
 ## 测试与构建
 
@@ -183,16 +272,16 @@ cd ..\frontend
 npm run build
 ```
 
-## 配置
+## 生产配置清单
 
-本地默认配置位于 `backend/src/main/resources/application.yml`。
-
-Compose 和 PostgreSQL 配置位于 `backend/src/main/resources/application-postgres.yml`。
-
-生产环境至少需要替换：
+至少替换：
 
 - `JWT_SECRET`
 - `UPLOAD_TOKEN_SECRET`
 - 数据库密码
-- MinIO 凭据
-- 默认内容域名和 HTTPS 配置
+- 对象存储凭据
+- `PUBLIC_BASE_URL`
+- `SITE_URL_TEMPLATE`
+- 自定义域名和 HTTPS 配置
+
+如果使用 Netlify Publisher，还需定期轮换 `NETLIFY_AUTH_TOKEN`。
