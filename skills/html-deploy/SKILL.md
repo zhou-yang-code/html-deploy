@@ -11,23 +11,40 @@ Use the platform API or the bundled Node script to publish a static site ZIP, wa
 
 Prefer `scripts/deploy.mjs` for the complete workflow.
 
+## Account Mode
+
+Ask the user how to authenticate before every first deploy, and never pick an
+account mode on their behalf:
+
+1. 登录已有账号 — `--auth login` (needs `HTML_DEPLOY_EMAIL` / `HTML_DEPLOY_PASSWORD`)
+2. 用自己的邮箱注册 — `--auth register` (needs the email and password the user wants)
+3. 随机创建一个账号 — `--auth random` (the script generates email, password, and tenant)
+
+When the script runs in an interactive terminal and no mode or credentials are
+given, it asks the same question itself. In non-interactive runs `--auth` is
+required, otherwise the script exits with a message instead of guessing.
+
 ```powershell
 $env:HTML_DEPLOY_API_URL = "https://html-deploy-api-production.up.railway.app"
+
+# 登录已有账号
 $env:HTML_DEPLOY_EMAIL = "<your-email>"
 $env:HTML_DEPLOY_PASSWORD = "<your-password>"
-
 node scripts/deploy.mjs `
   --file .\dist.zip `
   --tenant demo-tenant `
   --project demo-site `
   --name "Demo Site" `
-  --environment production `
-  --provider netlify
+  --auth login
+
+# 用自己的邮箱注册，或随机创建账号
+node scripts/deploy.mjs --file .\dist.zip --project demo-site --name "Demo Site" --auth register
+node scripts/deploy.mjs --file .\dist.zip --project demo-site --name "Demo Site" --auth random
 ```
 
 The script:
 
-1. Logs in.
+1. Resolves the account mode (login, register, or random).
 2. Resolves the tenant and project.
 3. Creates the project if it does not exist.
 4. Creates an artifact upload target.
@@ -36,21 +53,24 @@ The script:
 7. Creates a deployment and waits for an active or failed result.
 8. Prints deployment ID, version, status, and live URL as JSON.
 
-Use `--register` only when intentionally creating a new account and tenant:
+`--auth random` returns the generated credentials so the user can log in later:
 
-```powershell
-node scripts/deploy.mjs `
-  --register `
-  --file .\dist.zip `
-  --tenant demo-tenant `
-  --tenant-name "Demo Tenant" `
-  --project demo-site `
-  --name "Demo Site"
+```json
+{
+  "authMode": "random",
+  "createdAccount": {
+    "email": "html-deploy-1a2b3c4d@example.com",
+    "password": "<generated>"
+  }
+}
 ```
+
+Report those generated credentials to the user; this is the one case where a
+password may be shown. `--register` is a shorthand for `--auth register`.
 
 ## Inputs
 
-Read credentials from environment variables. Do not print passwords, JWTs, refresh tokens, or presigned upload URLs.
+Read credentials from environment variables. Do not print passwords, JWTs, refresh tokens, or presigned upload URLs, except the generated credentials returned by `--auth random`.
 
 | Setting | Environment variable | Default |
 | --- | --- | --- |
@@ -60,7 +80,8 @@ Read credentials from environment variables. Do not print passwords, JWTs, refre
 | Tenant slug | `--tenant` | first tenant when unambiguous |
 | Project slug | `--project` | required |
 | Environment | `--environment` | `production` |
-| Release provider | `--provider` | platform default (`GET /api/v1/release-providers`) |
+| Account mode | `--auth` | ask the user; `login` when credentials are already set |
+| Release provider | `--provider` | `local` (self-hosted platform) |
 
 ## Release Providers
 
@@ -68,13 +89,13 @@ The platform exposes an optional per-deployment release provider:
 
 | Provider | Result | Typical use |
 | --- | --- | --- |
+| `local` (default) | `{SITE_URL_TEMPLATE}` content endpoint | the platform's own self-hosted publishing path |
 | `netlify` | `https://{site}.netlify.app` | shareable public links with CDN |
-| `local` | `{SITE_URL_TEMPLATE}` content endpoint | verifying the platform's own publishing path |
 
-Omit `--provider` to use the platform default. Use
-`GET /api/v1/release-providers` to read `defaultProvider` and `providers`
-before selecting a mode. Provider is stored on the deployment, so rollback
-reuses the original provider.
+The script defaults to `local` (self-hosted). Pass `--provider netlify` when the
+user wants a public Netlify URL. Use `GET /api/v1/release-providers` to read
+`defaultProvider` and `providers`. Provider is stored on the deployment, so
+rollback reuses the original provider.
 
 The ZIP is validated by the platform. It must:
 

@@ -118,15 +118,16 @@ POST /api/v1/projects/{projectId}/deployments
 {
   "artifactId": "uuid",
   "environment": "production",
-  "provider": "netlify"
+  "provider": "local"
 }
 ```
 
-`provider` is optional. Omit it to use the platform default. Supported values:
+`provider` is optional. Omit it to use the platform default (self-hosted `local`
+on this deployment). Supported values:
 
 ```text
-netlify  -> https://{site}.netlify.app
 local    -> {SITE_URL_TEMPLATE} content endpoint
+netlify  -> https://{site}.netlify.app
 ```
 
 Read the current default and supported list:
@@ -137,7 +138,7 @@ GET /api/v1/release-providers
 
 ```json
 {
-  "defaultProvider": "netlify",
+  "defaultProvider": "local",
   "providers": ["netlify", "local"]
 }
 ```

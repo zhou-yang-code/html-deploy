@@ -29,8 +29,8 @@ https://html-deploy-api-production.up.railway.app/api/v1
 - 不可变 artifact、release 版本和部署历史。
 - Outbox Worker、部署状态机和回滚。
 - 项目归档、恢复和彻底删除（删除会清理发布数据、本地 release 与对应 Netlify Site）。
-- 两种内容发布模式，可按次发布选择（不传则用后端默认值）：
-  - `local`：由平台自己的 Spring Boot 内容接口发布，返回 `/sites/{site}/` 地址。
+- 两种内容发布模式，可按次发布选择，**默认自托管**：
+  - `local`（默认）：由平台自己的 Spring Boot 内容接口发布，返回 `/sites/{site}/` 地址。
   - `netlify`：调用 Netlify Deploy API，返回 `https://*.netlify.app` 地址。
 - Docker Compose 一键启动 PostgreSQL、MinIO、后端、控制台和 Nginx 内容节点。
 
@@ -75,6 +75,18 @@ npx skills add zhou-yang-code/html-deploy --skill html-deploy --full-depth -g -a
 
 ## 使用 Skill 发布
 
+### 账号模式
+
+Skill 在部署前会先询问账号方式，三种模式对应 `--auth`：
+
+| 模式 | 参数 | 说明 |
+| --- | --- | --- |
+| 登录已有账号 | `--auth login` | 读取 `HTML_DEPLOY_EMAIL` / `HTML_DEPLOY_PASSWORD` |
+| 用自己的邮箱注册 | `--auth register` | 用用户自己的邮箱和密码新建账号与租户 |
+| 随机创建账号 | `--auth random` | 自动生成邮箱、密码和租户，结果里返回凭据 |
+
+没有凭据且非交互运行时脚本会直接报错，不会替用户猜一个账号。在终端里直接运行脚本时，不带 `--auth` 会弹出同样的三选一询问。
+
 ### 配置账号
 
 ```powershell
@@ -84,14 +96,20 @@ $env:HTML_DEPLOY_PASSWORD = "<your-password>"
 $skillDir = Join-Path $HOME ".codex\skills\html-deploy"
 ```
 
-首次使用且还没有账号时：
+首次使用且还没有账号时（用自己的邮箱，或随机创建）：
 
 ```powershell
 node "$skillDir\scripts\deploy.mjs" `
-  --register `
+  --auth register `
   --file .\dist.zip `
   --tenant demo-tenant `
   --tenant-name "Demo Tenant" `
+  --project demo-site `
+  --name "Demo Site"
+
+node "$skillDir\scripts\deploy.mjs" `
+  --auth random `
+  --file .\dist.zip `
   --project demo-site `
   --name "Demo Site"
 ```
@@ -109,13 +127,13 @@ node "$skillDir\scripts\deploy.mjs" `
 
 Skill 会依次完成：
 
-1. 登录并解析租户和项目。
+1. 解析账号模式并登录或注册。
 2. 项目不存在时自动创建。
 3. 创建 artifact、上传 ZIP 并完成上传确认。
 4. 等待 artifact 状态变为 `READY`。
 5. 创建 deployment。
 6. 等待当前 Publisher 完成发布。
-7. 返回 deployment ID、版本、状态和公开 URL。
+7. 返回 deployment ID、版本、状态、公开 URL（默认自托管 `/sites/...`）。
 
 在 Codex 中也可以直接说：
 
@@ -125,14 +143,14 @@ Skill 会依次完成：
 
 ## 内容发布模式
 
-发布模式是**每次发布可选**的参数，不传时使用后端配置的默认值。
+发布模式是**每次发布可选**的参数，不传时使用后端配置的默认值。默认是自托管（`local`）。
 
 | Provider | 返回地址 | 适用场景 |
 | --- | --- | --- |
+| `local`（默认） | `https://api.example.com/sites/{site}/` | 平台自己的自托管发布链路 |
 | `netlify` | `https://{site}.netlify.app` | 长期公网分享和 CDN |
-| `local` | `https://api.example.com/sites/{site}/` | 验证平台自己的发布链路 |
 
-控制台在“发布新版本”处提供服务选择；Skill 使用 `--provider netlify|local`。
+控制台在“发布新版本”处提供服务选择，默认选中后端配置的 provider；Skill 默认使用 `local`，需要公网 CDN 时传 `--provider netlify`。
 读取当前默认值和可选值：
 
 ```http
@@ -145,7 +163,7 @@ GET /api/v1/release-providers
 {
   "artifactId": "uuid",
   "environment": "production",
-  "provider": "netlify"
+  "provider": "local"
 }
 ```
 
@@ -155,8 +173,8 @@ Provider 会随部署记录落库，回滚复用原部署的 provider。
 
 | 模式 | `RELEASE_PROVIDER` | 返回地址 | 适用场景 |
 | --- | --- | --- | --- |
-| Netlify（当前默认） | `netlify` | `https://{site}.netlify.app` | 长期公网分享和 CDN |
-| 自托管（测试） | `local` | `https://api.example.com/sites/{site}/` | 验证平台自己的发布链路 |
+| 自托管（当前默认） | `local` | `https://api.example.com/sites/{site}/` | 平台自己的发布链路 |
+| Netlify（可选） | `netlify` | `https://{site}.netlify.app` | 长期公网分享和 CDN |
 
 ### 自托管模式
 
@@ -260,17 +278,19 @@ Compose 会创建：
 SPRING_PROFILES_ACTIVE=postgres
 DATABASE_URL=<railway-postgres-url>
 STORAGE_TYPE=local
-RELEASE_PROVIDER=netlify
+RELEASE_PROVIDER=local
+SITE_URL_TEMPLATE=https://html-deploy-api-production.up.railway.app/sites/{site}/
 NETLIFY_AUTH_TOKEN=<netlify-personal-access-token>
 PUBLIC_BASE_URL=https://html-deploy-api-production.up.railway.app
 ```
 
-临时切换到自托管测试：
+默认走自托管（`local`）。需要公网 CDN 链接时，把默认值切到 Netlify，或在单次发布时传 `provider=netlify` / `--provider netlify`：
 
 ```text
-RELEASE_PROVIDER=local
-SITE_URL_TEMPLATE=https://html-deploy-api-production.up.railway.app/sites/{site}/
+RELEASE_PROVIDER=netlify
 ```
+
+注意：Railway 上 `STORAGE_TYPE=local` 使用容器临时磁盘，服务重建后历史 release 文件会丢失，历史版本将无法回滚，只能重新上传发布。
 
 ## Render 部署
 
