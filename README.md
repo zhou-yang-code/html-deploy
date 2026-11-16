@@ -8,7 +8,7 @@
 | --- | --- |
 | 控制台 | https://html-deploy-console-zhou-yang-code.netlify.app |
 | 后端健康检查 | https://html-deploy-api-production.up.railway.app/actuator/health |
-| 宣传片 | [（MP4，3.4 MB）](https://github.com/user-attachments/assets/84ba8d27-6332-413e-a222-c754531dd01c) |
+| 宣传片 | [（MP4，3.4 MB）] |
 
 https://github.com/user-attachments/assets/84ba8d27-6332-413e-a222-c754531dd01c
 
