@@ -1,6 +1,6 @@
 # HTML Deploy Platform
 
-基于 JDK 21、Spring Boot、DDD 和 Vue 3 的多租户 HTML 静态部署平台。
+基于 JDK 21、Spring Boot、DDD 和 Vue 3 的多租户 HTML 静态部署平台。（由于Railway过期，目前暂时不能使用）
 
 ## 线上演示
 
@@ -8,6 +8,7 @@
 | --- | --- |
 | 控制台 | https://html-deploy-console-zhou-yang-code.netlify.app |
 | 后端健康检查 | https://html-deploy-api-production.up.railway.app/actuator/health |
+| 宣传片 | [带字幕版（MP4，3.4 MB）](docs/assets/promo.mp4) |
 
 后端 API 根路径不提供 HTML 页面，不能直接当网站打开。业务接口前缀为：
 
